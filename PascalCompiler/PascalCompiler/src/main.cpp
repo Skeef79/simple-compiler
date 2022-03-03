@@ -1,7 +1,7 @@
 #include<fstream>
 #include<iostream>
 #include<sstream>
-#include "IO/io.h"
+#include "Lexer/lexer.h"
 
 int main(char argc, char** argv) {
 	//TODO: input filename from command line arguments

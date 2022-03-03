@@ -152,14 +152,17 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\IO\io.cpp" />
+    <ClCompile Include="src\Lexer\lexer.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\utils\utils.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="examples\example.pas" />
+    <None Include="examples\example3.pas" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\IO\io.h" />
+    <ClInclude Include="src\Lexer\lexer.h" />
     <ClInclude Include="src\utils\utils.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
