@@ -154,7 +154,10 @@
     <ClCompile Include="src\IO\io.cpp" />
     <ClCompile Include="src\Lexer\lexer.cpp" />
     <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\utils\keywords.cpp" />
+    <ClCompile Include="src\utils\tokens.cpp" />
     <ClCompile Include="src\utils\utils.cpp" />
+    <ClCompile Include="src\utils\variants.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="examples\example.pas" />
@@ -163,7 +166,10 @@
   <ItemGroup>
     <ClInclude Include="src\IO\io.h" />
     <ClInclude Include="src\Lexer\lexer.h" />
+    <ClInclude Include="src\utils\keywords.h" />
+    <ClInclude Include="src\utils\tokens.h" />
     <ClInclude Include="src\utils\utils.h" />
+    <ClInclude Include="src\utils\variants.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

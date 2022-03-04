@@ -1,6 +1,7 @@
 #include "io.h"
 
-Reader::Reader(std::istream& stream) : stream(stream) {}
+Reader::Reader(std::istream& stream) 
+	: stream(stream) {}
 
 Reader::~Reader() {}
 
