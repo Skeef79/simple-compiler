@@ -1,6 +1,7 @@
 #pragma once
 #include<map>
 #include<string>
+#include<set>
 
 enum class KeyWords : char {
 	programSy,		// program 
@@ -26,8 +27,6 @@ enum class KeyWords : char {
 	divisionSy,		// /
 	leftParSy,		// (
 	rightParSy,		// )
-	leftCurlySy,	// {
-	rightCurlySy,	// }
 	assignSy,		// :=
 	dotSy,			// .
 	commaSy,		// ,
@@ -39,8 +38,6 @@ enum class KeyWords : char {
 	lessEqualSy,	// <=
 	greaterEqualSy,	// >=
 	notEqualSy,		// <>
-	leftCommentSy,	// (*
-	rightCommentSy	// *)
 };
 
 const std::map<std::string, KeyWords> strToKeywords = {
@@ -67,8 +64,6 @@ const std::map<std::string, KeyWords> strToKeywords = {
 	{"/", KeyWords::divisionSy},
 	{"(", KeyWords::leftParSy},
 	{")", KeyWords::rightParSy},
-	{"{", KeyWords::leftCurlySy},
-	{"}", KeyWords::rightCurlySy},
 	{":=", KeyWords::assignSy},
 	{".", KeyWords::dotSy},
 	{",", KeyWords::commaSy},
@@ -80,8 +75,6 @@ const std::map<std::string, KeyWords> strToKeywords = {
 	{"<=", KeyWords::lessEqualSy},
 	{">=", KeyWords::greaterEqualSy},
 	{"<>", KeyWords::notEqualSy},
-	{"(*", KeyWords::leftCommentSy},
-	{"*)", KeyWords::rightCommentSy}
 };
 
 const std::map<KeyWords, std::string> keywordsToStr = {
@@ -108,8 +101,6 @@ const std::map<KeyWords, std::string> keywordsToStr = {
 	{KeyWords::divisionSy, "/"},
 	{KeyWords::leftParSy, "("},
 	{KeyWords::rightParSy, ")"},
-	{KeyWords::leftCurlySy, "{"},
-	{KeyWords::rightCurlySy, "}"},
 	{KeyWords::assignSy, ":="},
 	{KeyWords::dotSy, "."},
 	{KeyWords::commaSy, ","},
@@ -121,8 +112,25 @@ const std::map<KeyWords, std::string> keywordsToStr = {
 	{KeyWords::lessEqualSy, "<="},
 	{KeyWords::greaterEqualSy, ">=" },
 	{KeyWords::notEqualSy, "<>"},
-	{KeyWords::leftCommentSy, "(*"},
-	{KeyWords::rightCommentSy, "*)"}
 };
 
 bool isKeyword(std::string s);
+
+const std::set<char> oneCharKeywords = {
+	'@',
+	'^',
+	'+',
+	'-',
+	'*',
+	'/',
+	'(',
+	')',
+	'{',
+	'}',
+	'.',
+	',',
+	';',
+	'='
+};
+
+bool isOneCharKeyword(const char ch);

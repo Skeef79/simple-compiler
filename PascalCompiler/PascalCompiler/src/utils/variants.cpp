@@ -22,7 +22,6 @@ std::string CIntVariant::toString() {
 }
 
 
-
 CRealVariant::CRealVariant(double value)
 	: CVariant(VariantType::vtReal), value(value) {}
 
@@ -33,7 +32,6 @@ double CRealVariant::getValue() {
 std::string CRealVariant::toString() {
 	return std::to_string(value);
 }
-
 
 
 CStringVariant::CStringVariant(std::string value)

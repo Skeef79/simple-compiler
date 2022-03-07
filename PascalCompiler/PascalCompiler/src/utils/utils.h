@@ -1,14 +1,13 @@
 #pragma once
 #define EOL '\n'
+#define MAX_INT_LEN 14
 
 struct TextPosition {
 	int lineIndex;
 	int charIndex;
-	TextPosition();
 
+	TextPosition();
 	TextPosition(int lineIndex, int charIndex);
 };
 
-bool isSpace(char ch);
-bool isLetter(char ch);
 
