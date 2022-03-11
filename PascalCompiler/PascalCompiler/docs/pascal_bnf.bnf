@@ -1,0 +1,52 @@
+<program> ::= program <identifier>;<block>.|<block>.
+<block> ::= <typeDeclarationPart><varDeclarationPart><funcionDeclarationPart><statementPart>
+
+<typeDeclarationPart> ::= <empty> | type <typeDeclaration>; {<typeDeclaration>;}
+<typeDeclaration> ::=  <identifier> = <type>
+<type> ::= <identifier> | <pointerType>
+<pointerType> ::= ^<identifier>
+
+<varDeclarationPart>::= <empty> | var <varDeclaration>; {<varDeclaration>;}
+<varDeclaration> ::= <identifier> {,<identifier>} : <type>
+
+<funcionDeclarationPart> ::= {<funcionDeclaration>;}
+<funcionDeclaration> ::= <functionHeading> <block>
+<functionHeading> ::= function <identifier>:<type>; | 
+        function <identifier>(<formalParameterSection>{;<formalParameterSection>}):<type>;
+
+<formalParameterSection> ::= <empty> | <parameterGroup> | var <parameterGroup>
+<parameterGroup> ::= <identifier>{,<identifier>}: <type>
+
+<statementPart> ::= <compoundStatement>
+<compoundStatement> ::= begin <empty> | <statement>{;<statement>} end
+<statement> ::= <simpleStatement>|<structuredStatement>
+<simpleStatement> ::= <assignmentStatement>|<procedureStatement>
+
+<assignmentStatement> ::= <variable> := <expression>
+<variable> ::= <identifier>{^}
+
+<expression> ::= <simpleExpression>|<simpleExpression> <relationalOperator> <simpleExpression>
+<relationalOperator> ::= <|>|>=|<=|=|<>
+
+<simpleExpression> ::= <term>{<addingOperator><term>}
+<addingOperator> ::= + | - | or
+
+<term> ::= <factor>{<multiplyingOperator><factor>}
+<multiplyingOperator> ::= * | / | and
+
+<factor> ::= <variable> | <unsignedConst> | (<expression>) | <functionDesignator> | <unaryOperator><factor>
+<unaryOperator> ::= + | - | not
+
+<unsignedConst> ::= <unsignedNumber> | <stringConst>
+<unsignedNumber> ::= <unsignedInteger> | <unsignedReal>
+
+<functionDesignator> ::= <identifier> | <identifier>(<actualParameter>{,<actualParameter>})
+<procedureStatement> ::= <identifier> | <identifier>(<actualParameter>{,<actualParameter>})
+
+<actualParameter> ::= <expression>|<empty>
+
+<empty> ::=
+
+<structuredStatement> ::= <compoundStatement>|<ifStatement>|<whileStatement>
+<ifStatement> ::= if <expression> then <statement>| if<expression> then <statement> else <statement>
+<whileStatement> ::= while <expression> do <statement>

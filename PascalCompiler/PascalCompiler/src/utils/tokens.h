@@ -11,6 +11,12 @@ enum class TokenType : char {
 	ttConst
 };
 
+const  std::map<TokenType, std::string> tokenTypeToStr = {
+	{TokenType::ttIdent, "identifier"},
+	{TokenType::ttConst, "const"},
+	{TokenType::ttKeyword, "keyword"}
+};
+
 class CToken {
 public:
 	CToken(TokenType tType, TextPosition pos);
@@ -29,6 +35,8 @@ class CIdentToken : public CToken {
 public:
 	CIdentToken(std::string name, TextPosition pos);
 	std::string toString() override;
+	std::string getIdent();
+
 private:
 	std::string name;
 };
@@ -36,6 +44,8 @@ private:
 class CKeywordToken : public CToken {
 public:
 	CKeywordToken(KeyWords name, TextPosition pos);
+	KeyWords getKeyword();
+
 	std::string toString() override;
 private:
 	KeyWords name;
@@ -45,6 +55,8 @@ class CConstToken : public CToken {
 public:
 	CConstToken(CVariant* value, TextPosition pos);
 	std::string toString() override;
+
+	const std::unique_ptr<CVariant>& getValue() const;
 private:
 	std::unique_ptr<CVariant> value;
 };

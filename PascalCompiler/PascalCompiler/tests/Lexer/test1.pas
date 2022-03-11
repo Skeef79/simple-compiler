@@ -28,7 +28,7 @@ begin
 	writeln(inpt);
 
 	e:= true;
-	d := @e;
+	d := e;
 
 	f := 123.4567;
 

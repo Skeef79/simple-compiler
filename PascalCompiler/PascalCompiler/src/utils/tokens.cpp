@@ -45,3 +45,16 @@ void printToken(std::unique_ptr<CToken>& token) {
 	std::cout << std::setw(10) << std::left << leftInfo;
 	std::cout << token->toString() << std::endl;
 }
+
+
+std::string CIdentToken::getIdent() {
+	return name;
+}
+
+KeyWords CKeywordToken::getKeyword() {
+	return name;
+}
+
+const std::unique_ptr<CVariant>& CConstToken::getValue() const {
+	return value;
+}
