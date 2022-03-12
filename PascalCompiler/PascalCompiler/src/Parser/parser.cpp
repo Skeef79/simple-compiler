@@ -9,6 +9,7 @@ CParser::CParser(CLexer* lexer) {
 
 //accept functions
 void CParser::acceptKeyword(KeyWords expectedKeyword) {
+	
 	if (!isKeyword())
 		throw Error(ErrorCodes::UnexpectedtTokenType, token->getPosition(), tokenTypeToStr.at(token->getType()));
 
@@ -283,7 +284,8 @@ void CParser::factor() {
 	}
 
 	//Here i need to understand is it function or not, otherwise I dont' know
-	//
+	//duck tape
+
 	if (isIdent()) {
 		acceptIdent();
 		if (isKeyword() && keywordEquals(KeyWords::pointerSy)) {

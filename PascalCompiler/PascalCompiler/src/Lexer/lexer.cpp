@@ -89,21 +89,22 @@ std::string CLexer::getString() {
 	std::string str;
 	getNextChar();
 
+	bool done = false;
 	while (ch != '\n') {
 		str += ch;
 		getNextChar();
 		if (ch == '\'') {
 			getNextChar();
-			if (ch != '\'')
+			if (ch != '\'') {
+				done = true;
 				break;
+			}
 		}
 	}
-
-	if (ch == '\n')
+	if (!done)
 		throw Error(ErrorCodes::NoMatchingSymbol, startPos, "'");
-	else {
+	else
 		return str;
-	}
 }
 
 std::unique_ptr<CToken> CLexer::getNextToken() {
@@ -119,7 +120,7 @@ std::unique_ptr<CToken> CLexer::getNextToken() {
 		return nullptr;
 
 	TextPosition startPos = pos;
-	
+
 	if (ch == '}')
 		throw Error(ErrorCodes::UnexpectedSymbol, startPos, "}");
 

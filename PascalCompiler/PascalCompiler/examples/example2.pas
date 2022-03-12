@@ -15,7 +15,7 @@ begin
 	x:= x + 31.100;
 	
 	if a = b then begin
-		c: = 'it is true';
+		c:= 'it is true';
 	end;
 
 end.

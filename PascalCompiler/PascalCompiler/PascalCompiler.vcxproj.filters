@@ -52,6 +52,7 @@
     <None Include="examples\example4.pas" />
     <None Include="tests\Lexer\test1.pas" />
     <None Include="tests\Lexer\test2.pas" />
+    <None Include="tests\Parser\correct.pas" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\IO\io.h">

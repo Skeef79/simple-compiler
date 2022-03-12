@@ -16,9 +16,8 @@ enum class KeyWords : char {
 	whileSy,		// while 
 	doSy,			// do 
 	andSy,			// and 
-	orSy,			// orSy 
+	orSy,			// or
 	notSy,			// not 
-	addressSy,		// @ 
 	pointerSy,		// ^
 	plusSy,			// +
 	minusSy,		// - 
@@ -54,7 +53,6 @@ const std::map<std::string, KeyWords> strToKeywords = {
 	{"and", KeyWords::andSy},
 	{"or", KeyWords::orSy},
 	{"not", KeyWords::notSy},
-	{"@", KeyWords::addressSy},
 	{"^", KeyWords::pointerSy},
 	{"+", KeyWords::plusSy},
 	{"-", KeyWords::minusSy},
@@ -90,7 +88,6 @@ const std::map<KeyWords, std::string> keywordsToStr = {
 	{KeyWords::andSy, "and"},
 	{KeyWords::orSy, "or"},
 	{KeyWords::notSy, "not"},
-	{KeyWords::addressSy, "@"},
 	{KeyWords::pointerSy, "^"},
 	{KeyWords::plusSy, "+"},
 	{KeyWords::minusSy, "-"},

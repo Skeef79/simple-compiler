@@ -9,7 +9,6 @@ Error::Error(ErrorCodes errorCode, TextPosition pos, std::string token)
 		+ ":"
 		+ std::to_string(pos.charIndex+1)
 		+ ": "
-		+ "L"
 		+ std::to_string(static_cast<int>(errorCode))
 		+ " "
 		+ message
