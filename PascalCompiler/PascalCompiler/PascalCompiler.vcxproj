@@ -165,6 +165,8 @@
     </ClCompile>
     <ClCompile Include="src\Parser\parser.cpp" />
     <ClCompile Include="src\Parser\parser_utils.cpp" />
+    <ClCompile Include="src\Semantics\scope.cpp" />
+    <ClCompile Include="src\Semantics\types.cpp" />
     <ClCompile Include="src\utils\error.cpp" />
     <ClCompile Include="src\utils\keywords.cpp" />
     <ClCompile Include="src\utils\tokens.cpp" />
@@ -186,6 +188,8 @@
     <ClInclude Include="src\IO\io.h" />
     <ClInclude Include="src\Lexer\lexer.h" />
     <ClInclude Include="src\Parser\parser.h" />
+    <ClInclude Include="src\Semantics\scope.h" />
+    <ClInclude Include="src\Semantics\types.h" />
     <ClInclude Include="src\utils\error.h" />
     <ClInclude Include="src\utils\keywords.h" />
     <ClInclude Include="src\utils\tokens.h" />

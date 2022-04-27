@@ -1,5 +1,6 @@
 #pragma once
 #include "../Lexer/lexer.h"
+#include "../Semantics/scope.h"
 #include<deque>
 #include<vector>
 

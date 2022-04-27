@@ -14,7 +14,7 @@ inpt:string;
 
 {
 	function to find greatest common divisor
-
+}
 
 
 
