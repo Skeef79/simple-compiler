@@ -117,7 +117,7 @@ std::unique_ptr<CToken> CLexer::getNextToken() {
 	}
 
 	if (ch == EOF)
-		return nullptr;
+		return std::make_unique<CEOFToken>(pos);
 
 	TextPosition startPos = pos;
 

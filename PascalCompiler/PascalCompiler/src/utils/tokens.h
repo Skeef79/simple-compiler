@@ -8,13 +8,15 @@
 enum class TokenType : char {
 	ttIdent,
 	ttKeyword,
-	ttConst
+	ttConst,
+	ttEOF
 };
 
 const  std::map<TokenType, std::string> tokenTypeToStr = {
 	{TokenType::ttIdent, "identifier"},
 	{TokenType::ttConst, "const"},
-	{TokenType::ttKeyword, "keyword"}
+	{TokenType::ttKeyword, "keyword"},
+	{TokenType::ttEOF, "eof"}
 };
 
 class CToken {
@@ -63,5 +65,11 @@ private:
 	std::unique_ptr<CVariant> value;
 };
 
+class CEOFToken : public CToken {
+public:
+	CEOFToken(TextPosition pos);
+	std::string toString() override;
+
+};
 
 void printToken(std::unique_ptr<CToken>& token);

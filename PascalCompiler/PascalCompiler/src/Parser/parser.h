@@ -72,6 +72,7 @@ private:
 	bool isKeyword();
 	bool isIdent();
 	bool isConst();
+	bool isEOF();
 
 	bool keywordEquals(KeyWords keyword);
 	bool isDeclarationPart();

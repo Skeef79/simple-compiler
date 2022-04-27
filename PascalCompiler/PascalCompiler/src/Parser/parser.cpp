@@ -3,7 +3,17 @@
 
 CParser::CParser(CLexer* lexer) {
 	this->lexer.reset(lexer);
-	token = std::move(this->lexer->getNextToken());
+	bool goodToken = false;
+	while (!goodToken) {
+		goodToken = true;
+		try {
+			token = std::move(this->lexer->getNextToken());
+		}
+		catch (Error& e) {
+			addError(e);
+			goodToken = false;
+		}
+	}
 	tokenPointer = 0;
 }
 
@@ -68,13 +78,18 @@ void CParser::program() {
 		skipTo(acceptableTokens);
 	}
 
-	block();
+	const std::vector<std::shared_ptr<CToken>> acceptableTokensBlock = {
+		std::make_shared<CKeywordToken>(KeyWords::dotSy)
+	};
+
 	try {
+		block();
 		acceptKeyword(KeyWords::dotSy);
 	}
 	catch (Error& e) {
 		addError(e);
 	}
+
 }
 
 void CParser::block() {
@@ -126,6 +141,9 @@ void CParser::typeDeclaration() {
 }
 
 void CParser::type() {
+	if (isEOF())
+		throw Error(ErrorCodes::UnexpectedToken, token->getPosition(), "EOF");
+
 	if (isKeyword())
 		pointerType();
 	else

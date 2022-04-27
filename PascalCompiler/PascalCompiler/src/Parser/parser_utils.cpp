@@ -3,7 +3,20 @@
 void CParser::getNextToken() {
 	tokenPointer++;
 	if (tokenPointer >= tokenBuffer.size()) {
-		tokenBuffer.push_back(std::move(lexer->getNextToken()));
+		bool goodToken = false;
+		std::unique_ptr<CToken> currentToken;
+		while (!goodToken) {
+			goodToken = true;
+			try {
+				currentToken = std::move(lexer->getNextToken());
+			}
+			catch (Error& e) {
+				addError(e);
+				goodToken = false;
+			}
+		}
+
+		tokenBuffer.push_back(std::move(currentToken));
 		while (tokenBuffer.size() > BUFF_SIZE)
 			tokenBuffer.pop_front();
 		tokenPointer = tokenBuffer.size() - 1;
@@ -26,6 +39,10 @@ bool CParser::isIdent() {
 
 bool CParser::isConst() {
 	return token->getType() == TokenType::ttConst;
+}
+
+bool CParser::isEOF() {
+	return token->getType() == TokenType::ttEOF;
 }
 
 KeyWords CParser::getTokenKeyword() {
@@ -86,7 +103,7 @@ bool CParser::belong(const std::vector<std::shared_ptr<CToken>>& starters) {
 }
 
 void CParser::skipTo(const std::vector<std::shared_ptr<CToken>>& acceptableTokens) {
-	while (token && !belong(acceptableTokens)) {
+	while (!isEOF() && !belong(acceptableTokens)) {
 		getNextToken();
 	}
 }

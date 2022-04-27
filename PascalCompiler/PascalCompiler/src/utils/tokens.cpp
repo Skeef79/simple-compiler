@@ -44,6 +44,14 @@ std::string CConstToken::toString() {
 	return value->toString() + " ( " + variantTypeToStr.at(value->getVariantType()) + " )" + " [ ttConst ]";
 }
 
+
+CEOFToken::CEOFToken(TextPosition pos)
+	:CToken(TokenType::ttEOF, pos) {}
+
+std::string CEOFToken::toString() {
+	return tokenTypeToStr.at(TokenType::ttEOF) + "[ ttEOF ]";
+}
+
 void printToken(std::unique_ptr<CToken>& token) {
 
 	auto pos = token->getPosition();
