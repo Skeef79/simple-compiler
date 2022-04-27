@@ -30,7 +30,7 @@ bool CParser::isConst() {
 
 KeyWords CParser::getTokenKeyword() {
 	if (!isKeyword())
-		throw std::exception("Can't convert not CToken to CKeywordToken");
+		throw std::exception("Can't convert CToken to CKeywordToken");
 	return std::dynamic_pointer_cast<CKeywordToken>(token)->getKeyword();
 }
 
@@ -70,3 +70,27 @@ bool CParser::isUnaryOperator() {
 	return isKeyword() && unaryOperators.count(getTokenKeyword());
 }
 
+bool CParser::belong(const std::vector<std::shared_ptr<CToken>>& starters) {
+	for (auto& starter : starters) {
+		if (starter->getType() == token->getType()) {
+			if (token->getType() == TokenType::ttConst || token->getType() == TokenType::ttIdent)
+				return true;
+
+			auto tokenKeyword = std::dynamic_pointer_cast<CKeywordToken>(token)->getKeyword();
+			auto starterKeyword = std::dynamic_pointer_cast<CKeywordToken>(starter)->getKeyword();
+			if (tokenKeyword == starterKeyword)
+				return true;
+		}
+	}
+	return false;
+}
+
+void CParser::skipTo(const std::vector<std::shared_ptr<CToken>>& acceptableTokens) {
+	while (token && !belong(acceptableTokens)) {
+		getNextToken();
+	}
+}
+
+void CParser::addError(Error err) {
+	errorList.push_back(err);
+}

@@ -17,6 +17,8 @@ TextPosition CToken::getPosition() {
 CIdentToken::CIdentToken(std::string name, TextPosition pos)
 	: CToken(TokenType::ttIdent, pos), name(name) {}
 
+CIdentToken::CIdentToken()
+	: CToken(TokenType::ttIdent, TextPosition(-1, -1)) {}
 
 std::string CIdentToken::toString() {
 	return name + " [ ttIdent ]";
@@ -24,6 +26,10 @@ std::string CIdentToken::toString() {
 
 CKeywordToken::CKeywordToken(KeyWords name, TextPosition pos)
 	: CToken(TokenType::ttKeyword, pos), name(name) {}
+
+CKeywordToken::CKeywordToken(KeyWords name)
+	: CToken(TokenType::ttKeyword, TextPosition(-1, -1)), name(name) {}
+
 
 std::string CKeywordToken::toString() {
 	return keywordsToStr.at(name) + " [ ttKeyword ]";
@@ -41,7 +47,7 @@ std::string CConstToken::toString() {
 void printToken(std::unique_ptr<CToken>& token) {
 
 	auto pos = token->getPosition();
-	std::string leftInfo = std::to_string(pos.lineIndex+1) + ":" + std::to_string(pos.charIndex+1) + ": ";
+	std::string leftInfo = std::to_string(pos.lineIndex + 1) + ":" + std::to_string(pos.charIndex + 1) + ": ";
 	std::cout << std::setw(10) << std::left << leftInfo;
 	std::cout << token->toString() << std::endl;
 }

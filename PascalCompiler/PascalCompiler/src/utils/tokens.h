@@ -34,6 +34,7 @@ private:
 class CIdentToken : public CToken {
 public:
 	CIdentToken(std::string name, TextPosition pos);
+	CIdentToken();
 	std::string toString() override;
 	std::string getIdent();
 
@@ -44,6 +45,7 @@ private:
 class CKeywordToken : public CToken {
 public:
 	CKeywordToken(KeyWords name, TextPosition pos);
+	CKeywordToken(KeyWords name);
 	KeyWords getKeyword();
 
 	std::string toString() override;

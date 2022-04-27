@@ -13,7 +13,8 @@ enum class ErrorCodes {
 	ExpectedToken = 401,
 	IncorrectConstType = 103,
 	UnexpectedtTokenType = 402,
-	UnexpectedKeyword = 403
+	UnexpectedKeyword = 403,
+	UnexpectedToken = 404
 };
 
 const std::map<ErrorCodes, std::string> errorMessages = {
@@ -25,7 +26,8 @@ const std::map<ErrorCodes, std::string> errorMessages = {
 	{ErrorCodes::ExpectedToken, "Expected token"},
 	{ErrorCodes::IncorrectConstType, "Incorrect const type"},
 	{ErrorCodes::UnexpectedtTokenType, "Unexpected token type"},
-	{ErrorCodes::UnexpectedKeyword, "Unexpected keyword"}
+	{ErrorCodes::UnexpectedKeyword, "Unexpected keyword"},
+	{ErrorCodes::UnexpectedToken, "Unexpected token"}
 };
 
 //add filename?

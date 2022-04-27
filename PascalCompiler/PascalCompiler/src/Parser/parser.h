@@ -1,18 +1,25 @@
 #pragma once
 #include "../Lexer/lexer.h"
 #include<deque>
+#include<vector>
 
 class CParser {
 public:
 	CParser(CLexer* lexer);
 	void getNextToken();
 	void parse();
+	std::vector<Error> errorList;
 
 private:
+	//store the buffer of BUFF_SIZE elements
+	// if needed, move pointer to previous token
+	// GetNextToken() should be moving pointer and,  if needed, adding new token
 	const int BUFF_SIZE = 4;
 	int tokenPointer; //points to current token
 	std::deque<std::shared_ptr<CToken>>tokenBuffer;
-	
+	std::shared_ptr<CToken> token; //current token
+	std::unique_ptr<CLexer> lexer;
+
 	void rollback(); //moves tokenPointer to previous token
 
 	const std::set<KeyWords> declarationKeywords = {
@@ -54,13 +61,10 @@ private:
 		KeyWords::notSy
 	};
 
-	//store the buffer of BUFF_SIZE elements
-	// if needed, move pointer to previous token
-	// GetNextToken() should be moving pointer and,  if needed, adding new token
-	
+	bool belong(const std::vector<std::shared_ptr<CToken>>& starters);
+	void skipTo(const std::vector<std::shared_ptr<CToken>>& acceptableTokens);
 
-	std::shared_ptr<CToken> token; //current token
-	std::unique_ptr<CLexer> lexer;
+	void addError(Error err);
 
 	KeyWords getTokenKeyword();
 	VariantType getTokenVariantType();

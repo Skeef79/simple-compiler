@@ -9,7 +9,7 @@ CParser::CParser(CLexer* lexer) {
 
 //accept functions
 void CParser::acceptKeyword(KeyWords expectedKeyword) {
-	
+
 	if (!isKeyword())
 		throw Error(ErrorCodes::UnexpectedtTokenType, token->getPosition(), tokenTypeToStr.at(token->getType()));
 
@@ -37,7 +37,6 @@ void CParser::acceptIdent() {
 }
 
 
-
 //TODO:
 // nullptr check
 // ....
@@ -50,13 +49,32 @@ void CParser::parse() {
 }
 
 void CParser::program() {
-	if (token->getType() == TokenType::ttKeyword && keywordEquals(KeyWords::programSy)) {
-		acceptKeyword(KeyWords::programSy);
-		acceptIdent();
-		acceptKeyword(KeyWords::semicolonSy);
+	const std::vector<std::shared_ptr<CToken>> acceptableTokens = {
+		std::make_shared<CKeywordToken>(KeyWords::varSy),
+		std::make_shared<CKeywordToken>(KeyWords::typeSy),
+		std::make_shared<CKeywordToken>(KeyWords::functionSy),
+		std::make_shared<CKeywordToken>(KeyWords::beginSy)
+	};
+
+	try {
+		if (token->getType() == TokenType::ttKeyword && keywordEquals(KeyWords::programSy)) {
+			acceptKeyword(KeyWords::programSy);
+			acceptIdent();
+			acceptKeyword(KeyWords::semicolonSy);
+		}
 	}
+	catch (Error& e) {
+		addError(e);
+		skipTo(acceptableTokens);
+	}
+
 	block();
-	acceptKeyword(KeyWords::dotSy);
+	try {
+		acceptKeyword(KeyWords::dotSy);
+	}
+	catch (Error& e) {
+		addError(e);
+	}
 }
 
 void CParser::block() {
@@ -82,10 +100,22 @@ void CParser::identifier() {
 }
 
 void CParser::typeDeclarationPart() {
-	acceptKeyword(KeyWords::typeSy);
-	while (isIdent()) {
-		typeDeclaration();
-		acceptKeyword(KeyWords::semicolonSy);
+	const std::vector<std::shared_ptr<CToken>> acceptableTokens = {
+		std::make_shared<CKeywordToken>(KeyWords::varSy),
+		std::make_shared<CKeywordToken>(KeyWords::typeSy),
+		std::make_shared<CKeywordToken>(KeyWords::functionSy),
+		std::make_shared<CKeywordToken>(KeyWords::beginSy)
+	};
+	try {
+		acceptKeyword(KeyWords::typeSy);
+		while (isIdent()) {
+			typeDeclaration();
+			acceptKeyword(KeyWords::semicolonSy);
+		}
+	}
+	catch (Error& e) {
+		addError(e);
+		skipTo(acceptableTokens);
 	}
 }
 
@@ -93,7 +123,6 @@ void CParser::typeDeclaration() {
 	acceptIdent();
 	acceptKeyword(KeyWords::equalSy);
 	type();
-
 }
 
 void CParser::type() {
@@ -109,11 +138,24 @@ void CParser::pointerType() {
 }
 
 void CParser::varDeclarationPart() {
-	acceptKeyword(KeyWords::varSy);
-	while (isIdent()) {
-		varDeclaration();
-		acceptKeyword(KeyWords::semicolonSy);
+	const std::vector<std::shared_ptr<CToken>> acceptableTokens = {
+		std::make_shared<CKeywordToken>(KeyWords::varSy),
+		std::make_shared<CKeywordToken>(KeyWords::typeSy),
+		std::make_shared<CKeywordToken>(KeyWords::functionSy),
+		std::make_shared<CKeywordToken>(KeyWords::beginSy)
+	};
+	try {
+		acceptKeyword(KeyWords::varSy);
+		while (isIdent()) {
+			varDeclaration();
+			acceptKeyword(KeyWords::semicolonSy);
+		}
 	}
+	catch (Error& e) {
+		addError(e);
+		skipTo(acceptableTokens);
+	}
+
 }
 
 void CParser::varDeclaration() {
@@ -135,9 +177,22 @@ void CParser::varDeclaration() {
 }
 
 void CParser::functionDeclarationPart() {
-	while (isKeyword() && keywordEquals(KeyWords::functionSy)) {
-		functionDeclaration();
-		acceptKeyword(KeyWords::semicolonSy);
+	const std::vector<std::shared_ptr<CToken>> acceptableTokens = {
+		std::make_shared<CKeywordToken>(KeyWords::varSy),
+		std::make_shared<CKeywordToken>(KeyWords::typeSy),
+		std::make_shared<CKeywordToken>(KeyWords::functionSy),
+		std::make_shared<CKeywordToken>(KeyWords::beginSy)
+	};
+
+	try {
+		while (isKeyword() && keywordEquals(KeyWords::functionSy)) {
+			functionDeclaration();
+			acceptKeyword(KeyWords::semicolonSy);
+		}
+	}
+	catch (Error& e) {
+		addError(e);
+		skipTo(acceptableTokens);
 	}
 }
 
@@ -193,6 +248,7 @@ void CParser::statementPart() {
 }
 
 void CParser::compoundStatement() {
+
 	acceptKeyword(KeyWords::beginSy);
 
 	statement();
@@ -206,11 +262,24 @@ void CParser::compoundStatement() {
 
 void CParser::statement() {
 	//simple statement or structured statement
-	if (isIdent())
-		simpleStatement();
-	else {
-		if (isStructuredStatement())
-			structuredStatement();
+	const std::vector<std::shared_ptr<CToken>> acceptableTokens = {
+		std::make_shared<CIdentToken>(),
+		std::make_shared<CKeywordToken>(KeyWords::beginSy),
+		std::make_shared<CKeywordToken>(KeyWords::ifSy),
+		std::make_shared<CKeywordToken>(KeyWords::whileSy)
+	};
+
+	try {
+		if (isIdent())
+			simpleStatement();
+		else {
+			if (isStructuredStatement())
+				structuredStatement();
+		}
+	}
+	catch (Error& e) {
+		addError(e);
+		skipTo(acceptableTokens);
 	}
 }
 
@@ -283,9 +352,6 @@ void CParser::factor() {
 		return;
 	}
 
-	//Here i need to understand is it function or not, otherwise I dont' know
-	//duck tape
-
 	if (isIdent()) {
 		acceptIdent();
 		if (isKeyword() && keywordEquals(KeyWords::pointerSy)) {
@@ -307,7 +373,6 @@ void CParser::factor() {
 void CParser::procedureStatement() {
 	acceptIdent();
 
-	//maybe this is not the best
 	if (isKeyword() && keywordEquals(KeyWords::leftParSy)) {
 		acceptKeyword(KeyWords::leftParSy);
 		if (!(isKeyword() && keywordEquals(KeyWords::rightParSy))) {
