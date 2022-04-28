@@ -5,7 +5,7 @@ CScope::CScope(std::shared_ptr<CScope> parent) {
 }
 
 std::shared_ptr<CScope> CScope::getIdentScope(std::string ident) {
-	
+
 	auto currentScope = shared_from_this();
 
 	while (currentScope && !currentScope->types.count(ident))
@@ -15,17 +15,25 @@ std::shared_ptr<CScope> CScope::getIdentScope(std::string ident) {
 }
 
 ExprType CScope::getIdentType(std::string ident) {
-	auto scope = getIdentScope(idents[ident]);
+	auto identType = idents[ident];
+	auto scope = getIdentScope(identType);
 	if (!scope)
 		return ExprType::eErrorType;
-	return scope->types[scope->idents[ident]];
+	return scope->types[identType];
+}
+
+ExprType CScope::getTypeforType(std::string ident) {
+	auto scope = getIdentScope(ident);
+	if (!scope)
+		return ExprType::eErrorType;
+	return scope->types[ident];
 }
 
 std::shared_ptr<CFuncParameters> CScope::getFunctionParameters(std::string ident) {
 	auto currentScope = shared_from_this();
 	while (currentScope && !currentScope->idents.count(ident))
 		currentScope = currentScope->parent;
-	
+
 	return currentScope->functions[ident];
 }
 

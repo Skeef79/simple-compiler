@@ -38,11 +38,21 @@ bool compareParams(std::vector<ExprType> actualParameters, std::shared_ptr<CFunc
 	return true;
 }
 
-//strong typing!!!
+/*
+int -> int,real,bool
+real -> real,int, bool
+boolean -> int, real, bool
+string -> string
+*/
+
 bool isDerived(ExprType left, ExprType right) {
 	//Error types always derived
 	if (left == ExprType::eErrorType || right == ExprType::eErrorType)
 		return true;
 
-	return left == right;
+	if (left == ExprType::eStringType) {
+		return right == ExprType::eStringType;
+	}
+
+	return true;
 }

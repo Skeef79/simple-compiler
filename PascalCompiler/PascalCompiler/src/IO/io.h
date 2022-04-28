@@ -5,6 +5,7 @@
 #include<string>
 #include<utility>
 #include "../utils/utils.h"
+#include "../utils/error.h"
 
 class Reader {
 public:
@@ -21,10 +22,11 @@ private:
 
 class Writer {
 public:
-	Writer(const std::istream& stream);
+	Writer(std::ostream& stream);
 	~Writer();
-
+	void write(std::string data);
+	void writeError(Error e);
 
 private:
-	std::istream& stream;
+	std::ostream& stream;
 };

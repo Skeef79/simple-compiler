@@ -8,6 +8,8 @@ public:
 	CScope(std::shared_ptr<CScope> parent);
 	std::shared_ptr<CScope> getIdentScope(std::string ident);
 	ExprType getIdentType(std::string ident);
+	ExprType getTypeforType(std::string ident);
+
 	std::shared_ptr<CFuncParameters> getFunctionParameters(std::string ident);
 	bool identDefinedInScope(std::string ident);
 	bool identDefinedGlobal(std::string ident);

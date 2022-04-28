@@ -6,12 +6,12 @@
 
 enum class ErrorCodes {
 	IntegerOverflow = 101,
+	IncorrectConstType = 103,
 	UnknownSymbol = 201,
 	IncorrectNumber = 102,
 	UnexpectedSymbol = 202,
 	NoMatchingSymbol = 301,
 	ExpectedToken = 401,
-	IncorrectConstType = 103,
 	UnexpectedtTokenType = 402,
 	UnexpectedKeyword = 403,
 	UnexpectedToken = 404,

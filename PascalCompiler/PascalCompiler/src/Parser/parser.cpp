@@ -51,14 +51,6 @@ std::shared_ptr<CIdentToken> CParser::acceptIdent() {
 	return identToken;
 }
 
-/*
-TODO:
-params
-type checking with operations
-weak type?
-procedures like writeln, readln
-*/
-
 //main bnf part
 void CParser::parse() {
 	auto baseScope = initBaseScope();
@@ -157,7 +149,7 @@ void CParser::typeDeclaration(std::shared_ptr<CScope> scope) {
 			addError(Error(ErrorCodes::IdentifierNotDefined, identType->getPosition(), identType->getIdent()));
 		}
 		else {
-			auto tType = scope->getIdentType(identType->getIdent());
+			auto tType = scope->getTypeforType(identType->getIdent());
 			scope->addType(ident->getIdent(), tType);
 		}
 	}
@@ -217,6 +209,7 @@ void CParser::varDeclaration(std::shared_ptr<CScope> scope) {
 			isVarDeclaration = false;
 		}
 	}
+
 
 	auto identType = type(scope);
 	if (!scope->typeDefined(identType->getIdent())) {
@@ -351,7 +344,7 @@ std::shared_ptr<CFuncParameters> CParser::parameterGroup(std::shared_ptr<CScope>
 		pType = ExprType::eErrorType;
 	}
 	else {
-		pType = scope->getIdentType(identType->getIdent());
+		pType = scope->getTypeforType(identType->getIdent());
 	}
 
 	for (auto ident : varIdents) {
@@ -455,9 +448,6 @@ ExprType CParser::expression(std::shared_ptr<CScope> scope) {
 	ExprType leftExpr = simpleExpression(scope);
 
 	if (isKeyword() && isRelationOperator()) {
-		//TODO: 
-		// operations for types
-
 		acceptKeyword(getTokenKeyword());
 		ExprType rightExpr = simpleExpression(scope);
 		if (!isDerived(leftExpr, rightExpr)) {
@@ -475,18 +465,45 @@ ExprType CParser::expression(std::shared_ptr<CScope> scope) {
 ExprType CParser::simpleExpression(std::shared_ptr<CScope> scope) {
 	auto pos = token->getPosition();
 	ExprType leftTerm = term(scope);
+	
 	while (isKeyword() && isAddingOperator()) {
 		//TODO: 
 		// operations for types
 
+		auto operation = getTokenKeyword();
 		acceptKeyword(getTokenKeyword());
 		ExprType rightTerm = term(scope);
 		if (!isDerived(leftTerm, rightTerm)) {
 			addError(Error(ErrorCodes::TypeMismatch, pos, exprTypeToStr.at(leftTerm) + " to " + exprTypeToStr.at(rightTerm)));
 			leftTerm = ExprType::eErrorType;
 		}
-		if (leftTerm != ExprType::eErrorType)
-			leftTerm = rightTerm;
+		else {
+			//we can sum everything 
+			if (operation == KeyWords::plusSy) {
+				leftTerm = rightTerm;
+			}
+			//minus can't applied to string
+			if (operation == KeyWords::minusSy) {
+				if (leftTerm == ExprType::eStringType) {
+					addError(Error(ErrorCodes::TypeMismatch, pos, exprTypeToStr.at(leftTerm) + " to " + exprTypeToStr.at(rightTerm)));
+					leftTerm = ExprType::eErrorType;
+				}
+				else {
+					leftTerm = rightTerm;
+				}
+			}
+			//should be bool or convertable to bool
+			if (operation == KeyWords::orSy) {
+				if (leftTerm == ExprType::eStringType) {
+					addError(Error(ErrorCodes::TypeMismatch, pos, exprTypeToStr.at(leftTerm) + " to " + exprTypeToStr.at(rightTerm)));
+					leftTerm = ExprType::eErrorType;
+				}
+				else {
+					leftTerm = rightTerm;
+				}
+			}
+		}
+
 	}
 	return leftTerm;
 }
@@ -496,24 +513,53 @@ ExprType CParser::term(std::shared_ptr<CScope> scope) {
 	auto pos = token->getPosition();
 	ExprType leftFactor = factor(scope);
 	while (isKeyword() && isMultiplyingOperator()) {
-		//TODO: 
-		// operations for types
-
+		auto operation = getTokenKeyword();
 		acceptKeyword(getTokenKeyword());
 		ExprType rightFactor = factor(scope);
 		if (!isDerived(leftFactor, rightFactor)) {
 			addError(Error(ErrorCodes::TypeMismatch, pos, exprTypeToStr.at(leftFactor) + " to " + exprTypeToStr.at(rightFactor)));
 			leftFactor = ExprType::eErrorType;
 		}
-		if (leftFactor != ExprType::eErrorType)
-			leftFactor = rightFactor;
+		else {
+			//can't 'multiply' strings
+			if (operation == KeyWords::multiplySy) {
+				if (leftFactor == ExprType::eStringType) {
+					addError(Error(ErrorCodes::TypeMismatch, pos, exprTypeToStr.at(leftFactor) + " to " + exprTypeToStr.at(rightFactor)));
+					leftFactor = ExprType::eErrorType;
+				}
+				else {
+					leftFactor = rightFactor;
+				}
+			}
+			//can't 'divide' strings
+			if (operation == KeyWords::divisionSy) {
+				if (leftFactor == ExprType::eStringType) {
+					addError(Error(ErrorCodes::TypeMismatch, pos, exprTypeToStr.at(leftFactor) + " to " + exprTypeToStr.at(rightFactor)));
+					leftFactor = ExprType::eErrorType;
+				}
+				else {
+					leftFactor = rightFactor;
+				}
+			}
+			//can't 'and' strings
+			if (operation == KeyWords::andSy) {
+				if (leftFactor == ExprType::eStringType) {
+					addError(Error(ErrorCodes::TypeMismatch, pos, exprTypeToStr.at(leftFactor) + " to " + exprTypeToStr.at(rightFactor)));
+					leftFactor = ExprType::eErrorType;
+				}
+				else {
+					leftFactor = rightFactor;
+				}
+			}
+		}
 	}
 
 	return leftFactor;
 }
 
-ExprType CParser::factor(std::shared_ptr<CScope> scope) {
+ExprType CParser::factor(std::shared_ptr<CScope> scope) { //bool isUnary?
 	if (isUnaryOperator()) {
+		//can't be string
 		acceptKeyword(getTokenKeyword());
 		return factor(scope);
 	}
@@ -548,7 +594,6 @@ ExprType CParser::factor(std::shared_ptr<CScope> scope) {
 	return exprType;
 }
 
-//I don't have procedures, but I need to accept writeln and readln
 void CParser::procedureStatement(std::shared_ptr<CScope> scope) {
 	auto pos = token->getPosition();
 	auto functionIdent = acceptIdent();
@@ -640,7 +685,7 @@ void CParser::ifStatement(std::shared_ptr<CScope> scope) {
 	acceptKeyword(KeyWords::ifSy);
 	auto pos = token->getPosition();
 	ExprType exprType = expression(scope);
-	if (exprType != ExprType::eBooleanType) {
+	if (!isDerived(exprType, ExprType::eBooleanType)) {
 		addError(Error(ErrorCodes::IncorrectExprType, pos, exprTypeToStr.at(exprType)));
 	}
 
@@ -656,7 +701,7 @@ void CParser::whileStatement(std::shared_ptr<CScope> scope) {
 	acceptKeyword(KeyWords::whileSy);
 	auto pos = token->getPosition();
 	ExprType exprType = expression(scope);
-	if (exprType != ExprType::eBooleanType) {
+	if (!isDerived(exprType,ExprType::eBooleanType)) {
 		addError(Error(ErrorCodes::IncorrectExprType, pos, exprTypeToStr.at(exprType)));
 	}
 	acceptKeyword(KeyWords::doSy);

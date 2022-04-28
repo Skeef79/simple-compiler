@@ -126,6 +126,7 @@ std::shared_ptr<CScope> CParser::initBaseScope() {
 	scope->addIdent("true", "boolean");
 	scope->addIdent("false", "boolean");
 
+	//writeln and readln only for strings 
 	std::shared_ptr<CFuncParameters> sParams = std::make_unique<CFuncParameters>();
 	sParams->addParameter(std::make_shared<CParameter>(ExprType::eStringType, false));
 
