@@ -62,6 +62,8 @@ private:
 		KeyWords::notSy
 	};
 
+	std::shared_ptr<CScope> initBaseScope();
+
 	bool belong(const std::vector<std::shared_ptr<CToken>>& starters);
 	void skipTo(const std::vector<std::shared_ptr<CToken>>& acceptableTokens);
 
@@ -83,40 +85,47 @@ private:
 	bool isMultiplyingOperator();
 	bool isUnaryOperator();
 
-	void acceptKeyword(KeyWords expectedKeyword);
-	void acceptConst(VariantType expectedVariantType);
-	void acceptIdent();
+	std::shared_ptr<CKeywordToken> acceptKeyword(KeyWords expectedKeyword);
+	std::shared_ptr<CConstToken> acceptConst(VariantType expectedVariantType);
+	std::shared_ptr<CIdentToken> acceptIdent();
 
-	void program();
-	void block();
-	void identifier();
-	void typeDeclarationPart();
-	void typeDeclaration();
-	void type();
-	void pointerType();
-	void varDeclarationPart();
-	void varDeclaration();
-	void functionDeclarationPart();
-	void functionDeclaration();
-	void functionHeading();
-	void formalParameterSection();
-	void parameterGroup();
-	void statementPart();
-	void compoundStatement();
-	void statement();
-	void simpleStatement();
-	void assignmentStatement();
-	void variable();
-	void procedureStatement();
-	void actualParameter();
-	void expression();
-	void simpleExpression();
-	void term();
-	void factor();
-	void functionDesignator();
-	void structuredStatement();
-	void ifStatement();
-	void whileStatement();
+
+	struct FuncHeading {
+		std::shared_ptr<CIdentToken>ident;
+		std::shared_ptr<CIdentToken>identType;
+		std::shared_ptr<CFuncParameters> parameters;
+	};
+
+	void program(std::shared_ptr<CScope> scope);
+	void block(std::shared_ptr<CScope> scope);
+	std::shared_ptr<CIdentToken> identifier(std::shared_ptr<CScope> scope);
+	void typeDeclarationPart(std::shared_ptr<CScope> scope);
+	void typeDeclaration(std::shared_ptr<CScope> scope);
+	std::shared_ptr<CIdentToken> type(std::shared_ptr<CScope> scope);
+	std::shared_ptr<CIdentToken> pointerType(std::shared_ptr<CScope> scope);
+	void varDeclarationPart(std::shared_ptr<CScope> scope);
+	void varDeclaration(std::shared_ptr<CScope> scope);
+	void functionDeclarationPart(std::shared_ptr<CScope> scope);
+	void functionDeclaration(std::shared_ptr<CScope> scope);
+	FuncHeading functionHeading(std::shared_ptr<CScope> scope);
+	std::shared_ptr<CFuncParameters> formalParameterSection(std::shared_ptr<CScope> scope);
+	std::shared_ptr<CFuncParameters> parameterGroup(std::shared_ptr<CScope> scope, bool byRef);
+	void statementPart(std::shared_ptr<CScope> scope);
+	void compoundStatement(std::shared_ptr<CScope> scope);
+	void statement(std::shared_ptr<CScope> scope);
+	void simpleStatement(std::shared_ptr<CScope> scope);
+	void assignmentStatement(std::shared_ptr<CScope> scope);
+	ExprType variable(std::shared_ptr<CScope> scope);
+	void procedureStatement(std::shared_ptr<CScope> scope);
+	ExprType actualParameter(std::shared_ptr<CScope> scope);
+	ExprType expression(std::shared_ptr<CScope> scope);
+	ExprType simpleExpression(std::shared_ptr<CScope> scope);
+	ExprType term(std::shared_ptr<CScope> scope);
+	ExprType factor(std::shared_ptr<CScope> scope);
+	ExprType functionDesignator(std::shared_ptr<CScope> scope);
+	void structuredStatement(std::shared_ptr<CScope> scope);
+	void ifStatement(std::shared_ptr<CScope> scope);
+	void whileStatement(std::shared_ptr<CScope> scope);
 
 };
 

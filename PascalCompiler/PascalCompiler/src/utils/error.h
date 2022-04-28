@@ -14,7 +14,12 @@ enum class ErrorCodes {
 	IncorrectConstType = 103,
 	UnexpectedtTokenType = 402,
 	UnexpectedKeyword = 403,
-	UnexpectedToken = 404
+	UnexpectedToken = 404,
+	IdentifierAlreadyDefined = 501,
+	IdentifierNotDefined = 502,
+	TypeMismatch = 503,
+	IncorrectExprType = 504,
+	IncorrectParameters = 505
 };
 
 const std::map<ErrorCodes, std::string> errorMessages = {
@@ -27,7 +32,12 @@ const std::map<ErrorCodes, std::string> errorMessages = {
 	{ErrorCodes::IncorrectConstType, "Incorrect const type"},
 	{ErrorCodes::UnexpectedtTokenType, "Unexpected token type"},
 	{ErrorCodes::UnexpectedKeyword, "Unexpected keyword"},
-	{ErrorCodes::UnexpectedToken, "Unexpected token"}
+	{ErrorCodes::UnexpectedToken, "Unexpected token"},
+	{ErrorCodes::IdentifierAlreadyDefined, "Identifier already defined"},
+	{ErrorCodes::IdentifierNotDefined, "Identifier is not defined"},
+	{ErrorCodes::TypeMismatch, "Can't convert"},
+	{ErrorCodes::IncorrectExprType, "Incorrect expression type"},
+	{ErrorCodes::IncorrectParameters, "Incorrect parameters"}
 };
 
 //add filename?

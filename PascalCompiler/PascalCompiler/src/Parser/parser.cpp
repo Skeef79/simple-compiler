@@ -18,17 +18,19 @@ CParser::CParser(CLexer* lexer) {
 }
 
 //accept functions
-void CParser::acceptKeyword(KeyWords expectedKeyword) {
+std::shared_ptr<CKeywordToken> CParser::acceptKeyword(KeyWords expectedKeyword) {
 
 	if (!isKeyword())
 		throw Error(ErrorCodes::UnexpectedtTokenType, token->getPosition(), tokenTypeToStr.at(token->getType()));
 
 	if (getTokenKeyword() != expectedKeyword)
 		throw Error(ErrorCodes::ExpectedToken, token->getPosition(), keywordsToStr.at(expectedKeyword));
+	auto keywordToken = std::dynamic_pointer_cast<CKeywordToken>(token);
 	getNextToken();
+	return keywordToken;
 }
 
-void CParser::acceptConst(VariantType expectedVariantType) {
+std::shared_ptr<CConstToken> CParser::acceptConst(VariantType expectedVariantType) {
 	if (!isConst())
 		throw Error(ErrorCodes::UnexpectedtTokenType, token->getPosition(), tokenTypeToStr.at(token->getType()));
 
@@ -38,27 +40,33 @@ void CParser::acceptConst(VariantType expectedVariantType) {
 	if (tokenVariantType != expectedVariantType)
 		throw Error(ErrorCodes::IncorrectConstType, token->getPosition(), variantTypeToStr.at(tokenVariantType));
 	getNextToken();
+	return constToken;
 }
 
-void CParser::acceptIdent() {
+std::shared_ptr<CIdentToken> CParser::acceptIdent() {
 	if (!isIdent())
 		throw Error(ErrorCodes::UnexpectedtTokenType, token->getPosition(), tokenTypeToStr.at(token->getType()));
+	auto identToken = std::dynamic_pointer_cast<CIdentToken>(token);
 	getNextToken();
+	return identToken;
 }
 
-
-//TODO:
-// nullptr check
-// ....
-// 
-
+/*
+TODO:
+params
+type checking with operations
+weak type?
+procedures like writeln, readln
+*/
 
 //main bnf part
 void CParser::parse() {
-	program();
+	auto baseScope = initBaseScope();
+	auto scope = std::make_shared<CScope>(baseScope);
+	program(scope);
 }
 
-void CParser::program() {
+void CParser::program(std::shared_ptr<CScope> scope) {
 	const std::vector<std::shared_ptr<CToken>> acceptableTokens = {
 		std::make_shared<CKeywordToken>(KeyWords::varSy),
 		std::make_shared<CKeywordToken>(KeyWords::typeSy),
@@ -69,7 +77,8 @@ void CParser::program() {
 	try {
 		if (token->getType() == TokenType::ttKeyword && keywordEquals(KeyWords::programSy)) {
 			acceptKeyword(KeyWords::programSy);
-			acceptIdent();
+			auto ident = identifier(scope);
+			scope->addIdent(ident->getIdent(), "string");
 			acceptKeyword(KeyWords::semicolonSy);
 		}
 	}
@@ -83,7 +92,8 @@ void CParser::program() {
 	};
 
 	try {
-		block();
+		auto childScope = std::make_shared<CScope>(scope);
+		block(childScope);
 		acceptKeyword(KeyWords::dotSy);
 	}
 	catch (Error& e) {
@@ -92,29 +102,29 @@ void CParser::program() {
 
 }
 
-void CParser::block() {
+void CParser::block(std::shared_ptr<CScope> scope) {
 	while (isKeyword() && isDeclarationPart()) {
 		auto tokenKeyword = getTokenKeyword();
 		switch (tokenKeyword) {
 		case KeyWords::typeSy:
-			typeDeclarationPart();
+			typeDeclarationPart(scope);
 			break;
 		case KeyWords::varSy:
-			varDeclarationPart();
+			varDeclarationPart(scope);
 			break;
 		case KeyWords::functionSy:
-			functionDeclarationPart();
+			functionDeclarationPart(scope);
 			break;
 		}
 	}
-	statementPart();
+	statementPart(scope);
 }
 
-void CParser::identifier() {
-	acceptIdent();
+std::shared_ptr<CIdentToken> CParser::identifier(std::shared_ptr<CScope> scope) {
+	return acceptIdent();
 }
 
-void CParser::typeDeclarationPart() {
+void CParser::typeDeclarationPart(std::shared_ptr<CScope> scope) {
 	const std::vector<std::shared_ptr<CToken>> acceptableTokens = {
 		std::make_shared<CKeywordToken>(KeyWords::varSy),
 		std::make_shared<CKeywordToken>(KeyWords::typeSy),
@@ -124,7 +134,7 @@ void CParser::typeDeclarationPart() {
 	try {
 		acceptKeyword(KeyWords::typeSy);
 		while (isIdent()) {
-			typeDeclaration();
+			typeDeclaration(scope);
 			acceptKeyword(KeyWords::semicolonSy);
 		}
 	}
@@ -134,28 +144,41 @@ void CParser::typeDeclarationPart() {
 	}
 }
 
-void CParser::typeDeclaration() {
-	acceptIdent();
+void CParser::typeDeclaration(std::shared_ptr<CScope> scope) {
+	auto ident = identifier(scope);
 	acceptKeyword(KeyWords::equalSy);
-	type();
+	auto identType = type(scope);
+
+	if (scope->identDefinedInScope(ident->getIdent())) {
+		addError(Error(ErrorCodes::IdentifierAlreadyDefined, ident->getPosition(), ident->getIdent()));
+	}
+	else {
+		if (!scope->typeDefined(identType->getIdent())) {
+			addError(Error(ErrorCodes::IdentifierNotDefined, identType->getPosition(), identType->getIdent()));
+		}
+		else {
+			auto tType = scope->getIdentType(identType->getIdent());
+			scope->addType(ident->getIdent(), tType);
+		}
+	}
 }
 
-void CParser::type() {
+std::shared_ptr<CIdentToken> CParser::type(std::shared_ptr<CScope> scope) {
 	if (isEOF())
 		throw Error(ErrorCodes::UnexpectedToken, token->getPosition(), "EOF");
 
 	if (isKeyword())
-		pointerType();
+		return pointerType(scope);
 	else
-		acceptIdent();
+		return identifier(scope);
 }
 
-void CParser::pointerType() {
+std::shared_ptr<CIdentToken> CParser::pointerType(std::shared_ptr<CScope> scope) {
 	acceptKeyword(KeyWords::pointerSy);
-	acceptIdent();
+	return acceptIdent();
 }
 
-void CParser::varDeclarationPart() {
+void CParser::varDeclarationPart(std::shared_ptr<CScope> scope) {
 	const std::vector<std::shared_ptr<CToken>> acceptableTokens = {
 		std::make_shared<CKeywordToken>(KeyWords::varSy),
 		std::make_shared<CKeywordToken>(KeyWords::typeSy),
@@ -165,7 +188,7 @@ void CParser::varDeclarationPart() {
 	try {
 		acceptKeyword(KeyWords::varSy);
 		while (isIdent()) {
-			varDeclaration();
+			varDeclaration(scope);
 			acceptKeyword(KeyWords::semicolonSy);
 		}
 	}
@@ -176,10 +199,13 @@ void CParser::varDeclarationPart() {
 
 }
 
-void CParser::varDeclaration() {
+void CParser::varDeclaration(std::shared_ptr<CScope> scope) {
 	bool isVarDeclaration = true;
+	std::vector<std::shared_ptr<CIdentToken>> varIdents;
+
 	while (isVarDeclaration) {
-		acceptIdent();
+		varIdents.push_back(identifier(scope));
+
 		if (!isKeyword())
 			throw Error(ErrorCodes::UnexpectedtTokenType, token->getPosition(), tokenTypeToStr.at(token->getType()));
 
@@ -191,10 +217,24 @@ void CParser::varDeclaration() {
 			isVarDeclaration = false;
 		}
 	}
-	type();
+
+	auto identType = type(scope);
+	if (!scope->typeDefined(identType->getIdent())) {
+		addError(Error(ErrorCodes::IdentifierNotDefined, identType->getPosition(), identType->getIdent()));
+	}
+	else {
+		for (auto ident : varIdents) {
+			if (scope->identDefinedInScope(ident->getIdent())) {
+				addError(Error(ErrorCodes::IdentifierAlreadyDefined, ident->getPosition(), ident->getIdent()));
+			}
+			else {
+				scope->addIdent(ident->getIdent(), identType->getIdent());
+			}
+		}
+	}
 }
 
-void CParser::functionDeclarationPart() {
+void CParser::functionDeclarationPart(std::shared_ptr<CScope> scope) {
 	const std::vector<std::shared_ptr<CToken>> acceptableTokens = {
 		std::make_shared<CKeywordToken>(KeyWords::varSy),
 		std::make_shared<CKeywordToken>(KeyWords::typeSy),
@@ -204,7 +244,7 @@ void CParser::functionDeclarationPart() {
 
 	try {
 		while (isKeyword() && keywordEquals(KeyWords::functionSy)) {
-			functionDeclaration();
+			functionDeclaration(scope);
 			acceptKeyword(KeyWords::semicolonSy);
 		}
 	}
@@ -214,71 +254,137 @@ void CParser::functionDeclarationPart() {
 	}
 }
 
-void CParser::functionDeclaration() {
-	functionHeading();
-	block();
+void CParser::functionDeclaration(std::shared_ptr<CScope> scope) {
+	auto functionScope = std::make_shared<CScope>(scope);
+	auto [functionIdent, functionType, functionParameters] = functionHeading(functionScope);
+	if (scope->identDefinedInScope(functionIdent->getIdent())) {
+		addError(Error(ErrorCodes::IdentifierAlreadyDefined, functionIdent->getPosition(), functionIdent->getIdent()));
+	}
+	if (!scope->typeDefined(functionType->getIdent())) {
+		addError(Error(ErrorCodes::IdentifierNotDefined, functionType->getPosition(), functionType->getIdent()));
+	}
+	scope->addFunction(functionIdent->getIdent(), functionType->getIdent(), functionParameters);
+
+	block(functionScope);
 }
 
-void CParser::functionHeading() {
+CParser::FuncHeading CParser::functionHeading(std::shared_ptr<CScope> scope) {
 	acceptKeyword(KeyWords::functionSy);
-	acceptIdent();
+	auto functionIdent = identifier(scope);
+	auto functionParameters = std::make_shared<CFuncParameters>();
 
 	if (!isKeyword())
 		throw Error(ErrorCodes::UnexpectedtTokenType, token->getPosition(), tokenTypeToStr.at(token->getType()));
 
 	if (keywordEquals(KeyWords::colonSy)) {
 		acceptKeyword(KeyWords::colonSy);
-		type();
+		auto functionType = type(scope);
+		if (!scope->typeDefined(functionType->getIdent())) {
+			addError(Error(ErrorCodes::IdentifierNotDefined, functionType->getPosition(), functionType->getIdent()));
+		}
+
 		acceptKeyword(KeyWords::semicolonSy);
+		scope->addFunction(functionIdent->getIdent(), functionType->getIdent(), functionParameters);
+		scope->addIdent(functionIdent->getIdent(), functionType->getIdent());
+		return { functionIdent, functionType, functionParameters };
 	}
 	else {
 		acceptKeyword(KeyWords::leftParSy);
 
 		if (isIdent() || isKeyword() && keywordEquals(KeyWords::varSy)) {
-			formalParameterSection();
+			functionParameters->addParameters(formalParameterSection(scope));
 		}
 
 		while (isKeyword() && keywordEquals(KeyWords::semicolonSy)) {
 			acceptKeyword(KeyWords::semicolonSy);
-			formalParameterSection();
+			functionParameters->addParameters(formalParameterSection(scope));
 		}
 
 		acceptKeyword(KeyWords::rightParSy);
 		acceptKeyword(KeyWords::colonSy);
-		type();
+		auto functionType = type(scope);
+		if (!scope->typeDefined(functionType->getIdent())) {
+			addError(Error(ErrorCodes::IdentifierNotDefined, functionType->getPosition(), functionType->getIdent()));
+		}
 		acceptKeyword(KeyWords::semicolonSy);
+
+		scope->addFunction(functionIdent->getIdent(), functionType->getIdent(), functionParameters);
+		scope->addIdent(functionIdent->getIdent(), functionType->getIdent());
+		return { functionIdent, functionType, functionParameters };
 	}
 
 }
-void CParser::formalParameterSection() {
+std::shared_ptr<CFuncParameters> CParser::formalParameterSection(std::shared_ptr<CScope> scope) {
+	bool byRef = false;
 	if (isKeyword()) {
 		acceptKeyword(KeyWords::varSy);
+		byRef = true;
 	}
-	parameterGroup();
+
+	return parameterGroup(scope, byRef);
 }
 
-void CParser::parameterGroup() {
-	varDeclaration();
+std::shared_ptr<CFuncParameters> CParser::parameterGroup(std::shared_ptr<CScope> scope, bool byRef = false) {
+	bool isVarDeclaration = true;
+	auto parameters = std::make_shared<CFuncParameters>();
+	std::vector<std::shared_ptr<CIdentToken>> varIdents;
+
+	while (isVarDeclaration) {
+		auto ident = identifier(scope);
+		varIdents.push_back(ident);
+		if (!isKeyword())
+			throw Error(ErrorCodes::UnexpectedtTokenType, token->getPosition(), tokenTypeToStr.at(token->getType()));
+
+		if (keywordEquals(KeyWords::commaSy)) {
+			acceptKeyword(KeyWords::commaSy);
+		}
+		else {
+			acceptKeyword(KeyWords::colonSy);
+			isVarDeclaration = false;
+		}
+	}
+
+	auto identType = type(scope);
+	ExprType pType;
+	if (!scope->typeDefined(identType->getIdent())) {
+		addError(Error(ErrorCodes::IdentifierNotDefined, identType->getPosition(), identType->getIdent()));
+		pType = ExprType::eErrorType;
+	}
+	else {
+		pType = scope->getIdentType(identType->getIdent());
+	}
+
+	for (auto ident : varIdents) {
+		if (scope->identDefinedInScope(ident->getIdent())) {
+			addError(Error(ErrorCodes::IdentifierAlreadyDefined, ident->getPosition(), ident->getIdent()));
+		}
+		else {
+			scope->addIdent(ident->getIdent(), identType->getIdent());
+		}
+		parameters->addParameter(std::make_shared<CParameter>(pType, byRef));
+	}
+
+	return parameters;
 }
 
-void CParser::statementPart() {
-	compoundStatement();
+void CParser::statementPart(std::shared_ptr<CScope> scope) {
+	compoundStatement(scope);
 }
 
-void CParser::compoundStatement() {
+void CParser::compoundStatement(std::shared_ptr<CScope> scope) {
 
 	acceptKeyword(KeyWords::beginSy);
 
-	statement();
+	statement(scope);
 	while (isKeyword() && keywordEquals(KeyWords::semicolonSy)) {
 		acceptKeyword(KeyWords::semicolonSy);
-		statement();
+		statement(scope);
 	}
 
 	acceptKeyword(KeyWords::endSy);
 }
 
-void CParser::statement() {
+void CParser::statement(std::shared_ptr<CScope> scope) {
 	//simple statement or structured statement
 	const std::vector<std::shared_ptr<CToken>> acceptableTokens = {
 		std::make_shared<CIdentToken>(),
@@ -289,10 +395,10 @@ void CParser::statement() {
 
 	try {
 		if (isIdent())
-			simpleStatement();
+			simpleStatement(scope);
 		else {
 			if (isStructuredStatement())
-				structuredStatement();
+				structuredStatement(scope);
 		}
 	}
 	catch (Error& e) {
@@ -301,7 +407,7 @@ void CParser::statement() {
 	}
 }
 
-void CParser::simpleStatement() {
+void CParser::simpleStatement(std::shared_ptr<CScope> scope) {
 	if (!isIdent())
 		throw Error(ErrorCodes::UnexpectedtTokenType, token->getPosition(), tokenTypeToStr.at(token->getType()));
 
@@ -311,156 +417,250 @@ void CParser::simpleStatement() {
 
 	if (keywordEquals(KeyWords::assignSy) || keywordEquals(KeyWords::pointerSy)) {
 		rollback();
-		assignmentStatement();
+		assignmentStatement(scope);
 	}
 	else {
 		rollback();
-		procedureStatement();
+		procedureStatement(scope);
 	}
 }
 
 
-void CParser::assignmentStatement() {
-	variable();
+void CParser::assignmentStatement(std::shared_ptr<CScope> scope) {
+	auto pos = token->getPosition();
+	ExprType varType = variable(scope);
+
 	acceptKeyword(KeyWords::assignSy);
-	expression();
+	ExprType exprType = expression(scope);
+	if (!isDerived(varType, exprType)) {
+		addError(Error(ErrorCodes::TypeMismatch, pos, exprTypeToStr.at(exprType) + " to " + exprTypeToStr.at(varType)));
+	}
+
 }
 
-void CParser::variable() {
-	acceptIdent();
+ExprType CParser::variable(std::shared_ptr<CScope> scope) {
+	auto ident = identifier(scope);
+	if (!scope->identDefinedGlobal(ident->getIdent())) {
+		addError(Error(ErrorCodes::IdentifierNotDefined, ident->getPosition(), ident->getIdent()));
+		return ExprType::eErrorType;
+	}
 	while (isKeyword() && keywordEquals(KeyWords::pointerSy)) {
 		acceptKeyword(KeyWords::pointerSy);
 	}
+	return scope->getIdentType(ident->getIdent());
 }
 
-void CParser::expression() {
-	simpleExpression();
+ExprType CParser::expression(std::shared_ptr<CScope> scope) {
+	auto pos = token->getPosition();
+	ExprType leftExpr = simpleExpression(scope);
+
 	if (isKeyword() && isRelationOperator()) {
+		//TODO: 
+		// operations for types
+
 		acceptKeyword(getTokenKeyword());
-		simpleExpression();
+		ExprType rightExpr = simpleExpression(scope);
+		if (!isDerived(leftExpr, rightExpr)) {
+			addError(Error(ErrorCodes::TypeMismatch, pos, exprTypeToStr.at(leftExpr) + " to " + exprTypeToStr.at(rightExpr)));
+			leftExpr = ExprType::eErrorType;
+		}
+
+		if (leftExpr != ExprType::eErrorType)
+			leftExpr = rightExpr;
 	}
+
+	return leftExpr;
 }
 
-void CParser::simpleExpression() {
-	term();
+ExprType CParser::simpleExpression(std::shared_ptr<CScope> scope) {
+	auto pos = token->getPosition();
+	ExprType leftTerm = term(scope);
 	while (isKeyword() && isAddingOperator()) {
+		//TODO: 
+		// operations for types
+
 		acceptKeyword(getTokenKeyword());
-		term();
+		ExprType rightTerm = term(scope);
+		if (!isDerived(leftTerm, rightTerm)) {
+			addError(Error(ErrorCodes::TypeMismatch, pos, exprTypeToStr.at(leftTerm) + " to " + exprTypeToStr.at(rightTerm)));
+			leftTerm = ExprType::eErrorType;
+		}
+		if (leftTerm != ExprType::eErrorType)
+			leftTerm = rightTerm;
 	}
+	return leftTerm;
 }
 
 
-void CParser::term() {
-	factor();
+ExprType CParser::term(std::shared_ptr<CScope> scope) {
+	auto pos = token->getPosition();
+	ExprType leftFactor = factor(scope);
 	while (isKeyword() && isMultiplyingOperator()) {
+		//TODO: 
+		// operations for types
+
 		acceptKeyword(getTokenKeyword());
-		factor();
+		ExprType rightFactor = factor(scope);
+		if (!isDerived(leftFactor, rightFactor)) {
+			addError(Error(ErrorCodes::TypeMismatch, pos, exprTypeToStr.at(leftFactor) + " to " + exprTypeToStr.at(rightFactor)));
+			leftFactor = ExprType::eErrorType;
+		}
+		if (leftFactor != ExprType::eErrorType)
+			leftFactor = rightFactor;
 	}
+
+	return leftFactor;
 }
 
-void CParser::factor() {
+ExprType CParser::factor(std::shared_ptr<CScope> scope) {
 	if (isUnaryOperator()) {
 		acceptKeyword(getTokenKeyword());
-		factor();
-		return;
+		return factor(scope);
 	}
 
 	if (isConst()) {
-		acceptConst(getTokenVariantType());
-		return;
+		auto constToken = acceptConst(getTokenVariantType());
+		auto variantType = constToken->getValue()->getVariantType();
+		return variantTypeToExprType.at(variantType);
 	}
 
 	if (isIdent()) {
-		acceptIdent();
-		if (isKeyword() && keywordEquals(KeyWords::pointerSy)) {
-			rollback();
-			variable();
+		auto ident = identifier(scope);
+		if (scope->identDefinedGlobal(ident->getIdent())) {
+			if (scope->isFunction(ident->getIdent())) {
+				rollback();
+				return functionDesignator(scope);
+			}
+			else {
+				rollback();
+				return variable(scope);
+			}
 		}
 		else {
-			rollback();
-			functionDesignator();
+			addError(Error(ErrorCodes::IdentifierNotDefined, ident->getPosition(), ident->getIdent()));
+			return ExprType::eErrorType;
 		}
-		return;
 	}
 
 	acceptKeyword(KeyWords::leftParSy);
-	expression();
+	ExprType exprType = expression(scope);
 	acceptKeyword(KeyWords::rightParSy);
+	return exprType;
 }
 
-void CParser::procedureStatement() {
-	acceptIdent();
+//I don't have procedures, but I need to accept writeln and readln
+void CParser::procedureStatement(std::shared_ptr<CScope> scope) {
+	auto pos = token->getPosition();
+	auto functionIdent = acceptIdent();
+	std::vector<ExprType> parameters;
 
 	if (isKeyword() && keywordEquals(KeyWords::leftParSy)) {
 		acceptKeyword(KeyWords::leftParSy);
-		if (!(isKeyword() && keywordEquals(KeyWords::rightParSy))) {
-			actualParameter();
+		if (isKeyword() && keywordEquals(KeyWords::rightParSy)) {
+			acceptKeyword(KeyWords::rightParSy);
+		}
+		else {
+			parameters.push_back(actualParameter(scope));
 			while (isKeyword() && keywordEquals(KeyWords::commaSy)) {
 				acceptKeyword(KeyWords::commaSy);
-				actualParameter();
+				parameters.push_back(actualParameter(scope));
 			}
+			acceptKeyword(KeyWords::rightParSy);
 		}
-		acceptKeyword(KeyWords::rightParSy);
 	}
+
+	if (!scope->identDefinedGlobal(functionIdent->getIdent())) {
+		addError(Error(ErrorCodes::IdentifierNotDefined, functionIdent->getPosition(), functionIdent->getIdent()));
+		return;
+	}
+
+	if (!compareParams(parameters, scope->getFunctionParameters(functionIdent->getIdent()))) {
+		addError(Error(ErrorCodes::IncorrectParameters, pos, ""));
+	}
+
 }
 
 
-void CParser::functionDesignator() {
-	acceptIdent();
+ExprType CParser::functionDesignator(std::shared_ptr<CScope> scope) {
+	auto pos = token->getPosition();
+	auto functionIdent = acceptIdent();
+	std::vector<ExprType> parameters;
 	if (isKeyword() && keywordEquals(KeyWords::leftParSy)) {
 		acceptKeyword(KeyWords::leftParSy);
-		actualParameter();
-		while (isKeyword() && keywordEquals(KeyWords::commaSy)) {
-			acceptKeyword(KeyWords::commaSy);
-			actualParameter();
+		if (isKeyword() && keywordEquals(KeyWords::rightParSy)) {
+			acceptKeyword(KeyWords::rightParSy);
 		}
-		acceptKeyword(KeyWords::rightParSy);
+		else {
+			parameters.push_back(actualParameter(scope));
+			while (isKeyword() && keywordEquals(KeyWords::commaSy)) {
+				acceptKeyword(KeyWords::commaSy);
+				parameters.push_back(actualParameter(scope));
+			}
+			acceptKeyword(KeyWords::rightParSy);
+		}
 	}
+
+	if (!scope->identDefinedGlobal(functionIdent->getIdent())) {
+		addError(Error(ErrorCodes::IdentifierNotDefined, functionIdent->getPosition(), functionIdent->getIdent()));
+		return ExprType::eErrorType;
+	}
+
+	if (!compareParams(parameters, scope->getFunctionParameters(functionIdent->getIdent()))) {
+		addError(Error(ErrorCodes::IncorrectParameters,pos, ""));
+	}
+	return scope->getIdentType(functionIdent->getIdent());
 }
 
-void CParser::actualParameter() {
-	if (isKeyword() && keywordEquals(KeyWords::rightParSy))
-		return;
-	expression();
+ExprType CParser::actualParameter(std::shared_ptr<CScope> scope) {
+	return expression(scope);
 }
 
-void CParser::structuredStatement() {
+void CParser::structuredStatement(std::shared_ptr<CScope> scope) {
 	if (!isKeyword())
 		throw Error(ErrorCodes::UnexpectedtTokenType, token->getPosition(), tokenTypeToStr.at(token->getType()));
 
 	if (keywordEquals(KeyWords::beginSy)) {
-		compoundStatement();
+		compoundStatement(scope);
 		return;
 	}
 	if (keywordEquals(KeyWords::ifSy)) {
-		ifStatement();
+		ifStatement(scope);
 		return;
 	}
 
 	if (keywordEquals(KeyWords::whileSy)) {
-		whileStatement();
+		whileStatement(scope);
 		return;
 	}
 
 	throw Error(ErrorCodes::UnexpectedKeyword, token->getPosition(), keywordsToStr.at(getTokenKeyword()));
 }
 
-void CParser::ifStatement() {
+void CParser::ifStatement(std::shared_ptr<CScope> scope) {
 	acceptKeyword(KeyWords::ifSy);
-	expression();
+	auto pos = token->getPosition();
+	ExprType exprType = expression(scope);
+	if (exprType != ExprType::eBooleanType) {
+		addError(Error(ErrorCodes::IncorrectExprType, pos, exprTypeToStr.at(exprType)));
+	}
+
 	acceptKeyword(KeyWords::thenSy);
-	statement();
+	statement(scope);
 	if (isKeyword() && keywordEquals(KeyWords::elseSy)) {
 		acceptKeyword(KeyWords::elseSy);
-		statement();
+		statement(scope);
 	}
 }
 
-void CParser::whileStatement() {
+void CParser::whileStatement(std::shared_ptr<CScope> scope) {
 	acceptKeyword(KeyWords::whileSy);
-	expression();
+	auto pos = token->getPosition();
+	ExprType exprType = expression(scope);
+	if (exprType != ExprType::eBooleanType) {
+		addError(Error(ErrorCodes::IncorrectExprType, pos, exprTypeToStr.at(exprType)));
+	}
 	acceptKeyword(KeyWords::doSy);
-	statement();
+	statement(scope);
 }
 
 

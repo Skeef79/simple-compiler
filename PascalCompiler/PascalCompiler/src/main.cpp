@@ -11,7 +11,7 @@
 int main(int argc, char** argv) {
 	//TODO: input filename from command line arguments
 
-	std::ifstream fstream("tests/Parser/incorrect.pas");
+	std::ifstream fstream("tests/Parser/correct.pas");
 
 	std::unique_ptr<Reader> reader = std::make_unique<Reader>(fstream);
 	std::unique_ptr<CLexer> lexer = std::make_unique<CLexer>(reader.release());

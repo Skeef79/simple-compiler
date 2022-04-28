@@ -87,6 +87,7 @@ bool CParser::isUnaryOperator() {
 	return isKeyword() && unaryOperators.count(getTokenKeyword());
 }
 
+//Error handling
 bool CParser::belong(const std::vector<std::shared_ptr<CToken>>& starters) {
 	for (auto& starter : starters) {
 		if (starter->getType() == token->getType()) {
@@ -110,4 +111,25 @@ void CParser::skipTo(const std::vector<std::shared_ptr<CToken>>& acceptableToken
 
 void CParser::addError(Error err) {
 	errorList.push_back(err);
+}
+
+
+//Scope handling
+
+std::shared_ptr<CScope> CParser::initBaseScope() {
+	std::shared_ptr<CScope> scope = std::make_shared<CScope>(nullptr);
+	
+	scope->addType("integer", ExprType::eIntType);
+	scope->addType("string", ExprType::eStringType);
+	scope->addType("real", ExprType::eRealType);
+	scope->addType("boolean", ExprType::eBooleanType);
+	scope->addIdent("true", "boolean");
+	scope->addIdent("false", "boolean");
+
+	std::shared_ptr<CFuncParameters> sParams = std::make_unique<CFuncParameters>();
+	sParams->addParameter(std::make_shared<CParameter>(ExprType::eStringType, false));
+
+	scope->addFunction("writeln", "boolean", sParams);
+	scope->addFunction("readln", "boolean", sParams);
+	return scope;
 }
