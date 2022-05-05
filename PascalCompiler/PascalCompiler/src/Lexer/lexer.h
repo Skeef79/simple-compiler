@@ -18,7 +18,6 @@ private:
 
 	std::string getName();
 	std::pair<VariantType, std::string> getNumber();
-	std::string getString();
 	void deleteComment();
 
 	bool isSpace(char ch);

@@ -41,9 +41,9 @@ const std::map<ErrorCodes, std::string> errorMessages = {
 };
 
 //add filename?
-class Error : public std::exception {
+class CError : public std::exception {
 public:
-	explicit Error(ErrorCodes errorCode, TextPosition pos, std::string token);
+	explicit CError(ErrorCodes errorCode, TextPosition pos, std::string token);
 	const char* what() const throw() override;
 
 private:

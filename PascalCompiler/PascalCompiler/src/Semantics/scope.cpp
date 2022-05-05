@@ -74,4 +74,15 @@ bool CScope::isFunction(std::string ident) {
 }
 
 
+void CScope::addAlloca(std::string ident, AllocaInst* alloca) {
+	varAllocas[ident] = alloca;
+}
+
+AllocaInst* CScope::getAlloca(std::string ident) {
+	auto currentScope = shared_from_this();
+	while (currentScope && !currentScope->idents.count(ident))
+		currentScope = currentScope->parent;
+
+	return currentScope->varAllocas.at(ident);
+}
 

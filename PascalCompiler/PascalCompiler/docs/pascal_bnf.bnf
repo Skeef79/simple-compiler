@@ -3,8 +3,7 @@
 
 <typeDeclarationPart> ::= <empty> | type <typeDeclaration>; {<typeDeclaration>;}
 <typeDeclaration> ::=  <identifier> = <type>
-<type> ::= <identifier> | <pointerType>
-<pointerType> ::= ^<identifier>
+<type> ::= <identifier>
 
 <varDeclarationPart>::= <empty> | var <varDeclaration>; {<varDeclaration>;}
 <varDeclaration> ::= <identifier> {,<identifier>} : <type>
@@ -23,7 +22,7 @@
 <simpleStatement> ::= <assignmentStatement>|<procedureStatement>
 
 <assignmentStatement> ::= <variable> := <expression>
-<variable> ::= <identifier>{^}
+<variable> ::= <identifier>
 
 <expression> ::= <simpleExpression>|<simpleExpression> <relationalOperator> <simpleExpression>
 <relationalOperator> ::= <|>|>=|<=|=|<>
@@ -37,7 +36,7 @@
 <factor> ::= <variable> | <unsignedConst> | (<expression>) | <functionDesignator> | <unaryOperator><factor>
 <unaryOperator> ::= + | - | not
 
-<unsignedConst> ::= <unsignedNumber> | <stringConst>
+<unsignedConst> ::= <unsignedNumber>
 <unsignedNumber> ::= <unsignedInteger> | <unsignedReal>
 
 <functionDesignator> ::= <identifier> | <identifier>(<actualParameter>{,<actualParameter>})

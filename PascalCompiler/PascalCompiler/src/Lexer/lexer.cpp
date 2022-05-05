@@ -57,7 +57,7 @@ std::pair<VariantType, std::string> CLexer::getNumber() {
 	}
 
 	if (!isNumber(number))
-		throw Error(ErrorCodes::IncorrectNumber, startPos, number);
+		throw CError(ErrorCodes::IncorrectNumber, startPos, number);
 
 	if (count(number.begin(), number.end(), '.')) {
 		//overflow for real type?
@@ -65,7 +65,7 @@ std::pair<VariantType, std::string> CLexer::getNumber() {
 	}
 	else {
 		if (size(number) > MAX_INT_LEN)
-			throw Error(ErrorCodes::IntegerOverflow, startPos, number);
+			throw CError(ErrorCodes::IntegerOverflow, startPos, number);
 		return std::make_pair(VariantType::vtInt, number);
 	}
 }
@@ -78,33 +78,9 @@ void CLexer::deleteComment() {
 		getNextChar();
 
 	if (ch == EOF)
-		throw Error(ErrorCodes::NoMatchingSymbol, startPos, "{");
+		throw CError(ErrorCodes::NoMatchingSymbol, startPos, "{");
 	else
 		getNextChar();
-}
-
-std::string CLexer::getString() {
-	TextPosition startPos = pos;
-
-	std::string str;
-	getNextChar();
-
-	bool done = false;
-	while (ch != '\n') {
-		str += ch;
-		getNextChar();
-		if (ch == '\'') {
-			getNextChar();
-			if (ch != '\'') {
-				done = true;
-				break;
-			}
-		}
-	}
-	if (!done)
-		throw Error(ErrorCodes::NoMatchingSymbol, startPos, "'");
-	else
-		return str;
 }
 
 std::unique_ptr<CToken> CLexer::getNextToken() {
@@ -122,7 +98,7 @@ std::unique_ptr<CToken> CLexer::getNextToken() {
 	TextPosition startPos = pos;
 
 	if (ch == '}')
-		throw Error(ErrorCodes::UnexpectedSymbol, startPos, "}");
+		throw CError(ErrorCodes::UnexpectedSymbol, startPos, "}");
 
 
 	if (isLetter(ch)) { //ident, keywords, true, false
@@ -145,13 +121,7 @@ std::unique_ptr<CToken> CLexer::getNextToken() {
 		return token;
 	}
 
-	if (ch == '\'') { //string
-		std::string value = getString();
-		std::unique_ptr<CVariant> stringVariant = std::make_unique<CStringVariant>(value);
-		return std::make_unique<CConstToken>(stringVariant.release(), startPos);
-	}
-
-	if (isdigit(ch)) { //int, float
+	if (isdigit(ch)) { //int, real
 		std::unique_ptr<CToken>token;
 		auto [type, number] = getNumber();
 
@@ -212,7 +182,7 @@ std::unique_ptr<CToken> CLexer::getNextToken() {
 			return std::make_unique<CKeywordToken>(strToKeywords.at(name), startPos);
 		}
 	default:
-		throw Error(ErrorCodes::UnknownSymbol, startPos, name);
+		throw CError(ErrorCodes::UnknownSymbol, startPos, name);
 	}
 
 	return nullptr;

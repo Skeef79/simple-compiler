@@ -2,6 +2,11 @@
 #include "types.h"
 #include<map>
 #include<string>
+#include "llvm/IR/Instructions.h"
+
+using namespace llvm;
+using namespace llvm::sys;
+
 
 class CScope : public std::enable_shared_from_this<CScope> {
 public:
@@ -18,12 +23,18 @@ public:
 	void addFunction(std::string ident, std::string functionType, std::shared_ptr<CFuncParameters> fParams);
 	void addType(std::string ident, ExprType exprType);
 	bool isFunction(std::string ident);
+	void addAlloca(std::string ident, AllocaInst* alloca);
+	AllocaInst* getAlloca(std::string ident);
 
 private:
 	std::shared_ptr<CScope> parent;
 	std::map<std::string, std::string>idents;
 	std::map<std::string, ExprType> types;
 	std::map<std::string, std::shared_ptr<CFuncParameters>> functions;
+
+	//store allocas to variables (names same as in idents)
+	std::map<std::string, AllocaInst*> varAllocas;
+
 };
 
 

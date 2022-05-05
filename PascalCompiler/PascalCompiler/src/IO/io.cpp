@@ -30,7 +30,7 @@ void Writer::write(std::string data) {
 	stream << data;
 }
 
-void Writer::writeError(Error e) {
+void Writer::writeError(CError e) {
 	stream << e.what() << std::endl;
 }
 

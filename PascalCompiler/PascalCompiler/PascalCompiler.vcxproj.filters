@@ -51,6 +51,9 @@
     <ClCompile Include="src\Semantics\scope.cpp">
       <Filter>Исходные файлы</Filter>
     </ClCompile>
+    <ClCompile Include="src\Codegen\codegen.cpp">
+      <Filter>Исходные файлы</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="examples\example.pas" />
@@ -64,6 +67,7 @@
     <None Include="tests\Semantic\incorrect.pas" />
     <None Include="tests\Semantic\correct.pas" />
     <None Include="tests\Semantic\incorrect2.pas" />
+    <None Include="tests\Semantic\simple.pas" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\IO\io.h">
@@ -97,6 +101,9 @@
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
     <ClInclude Include="src\Semantics\scope.h">
+      <Filter>Файлы заголовков</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Codegen\codegen.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
   </ItemGroup>

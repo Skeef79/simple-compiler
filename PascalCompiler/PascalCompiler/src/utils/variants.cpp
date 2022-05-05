@@ -34,18 +34,6 @@ std::string CRealVariant::toString() {
 }
 
 
-CStringVariant::CStringVariant(std::string value)
-	: CVariant(VariantType::vtString), value(value) {}
-
-std::string CStringVariant::getValue() {
-	return value;
-}
-
-std::string CStringVariant::toString() {
-	return value;
-}
-
-
 CBooleanVariant::CBooleanVariant(bool value)
 	: CVariant(VariantType::vtBoolean), value(value) {}
 

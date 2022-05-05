@@ -3,13 +3,14 @@
 #include "../Semantics/scope.h"
 #include<deque>
 #include<vector>
+#include "../Codegen/codegen.h"
 
 class CParser {
 public:
 	CParser(CLexer* lexer);
 	void getNextToken();
 	void parse();
-	std::vector<Error> errorList;
+	std::vector<CError> errorList;
 
 private:
 	//store the buffer of BUFF_SIZE elements
@@ -20,6 +21,8 @@ private:
 	std::deque<std::shared_ptr<CToken>>tokenBuffer;
 	std::shared_ptr<CToken> token; //current token
 	std::unique_ptr<CLexer> lexer;
+
+	std::shared_ptr<CCodeGenerator> gen;
 
 	void rollback(); //moves tokenPointer to previous token
 
@@ -67,7 +70,7 @@ private:
 	bool belong(const std::vector<std::shared_ptr<CToken>>& starters);
 	void skipTo(const std::vector<std::shared_ptr<CToken>>& acceptableTokens);
 
-	void addError(Error err);
+	void addError(CError err);
 
 	KeyWords getTokenKeyword();
 	VariantType getTokenVariantType();
@@ -102,7 +105,6 @@ private:
 	void typeDeclarationPart(std::shared_ptr<CScope> scope);
 	void typeDeclaration(std::shared_ptr<CScope> scope);
 	std::shared_ptr<CIdentToken> type(std::shared_ptr<CScope> scope);
-	std::shared_ptr<CIdentToken> pointerType(std::shared_ptr<CScope> scope);
 	void varDeclarationPart(std::shared_ptr<CScope> scope);
 	void varDeclaration(std::shared_ptr<CScope> scope);
 	void functionDeclarationPart(std::shared_ptr<CScope> scope);
@@ -115,14 +117,14 @@ private:
 	void statement(std::shared_ptr<CScope> scope);
 	void simpleStatement(std::shared_ptr<CScope> scope);
 	void assignmentStatement(std::shared_ptr<CScope> scope);
-	ExprType variable(std::shared_ptr<CScope> scope);
+	Value* variable(std::shared_ptr<CScope> scope);
 	void procedureStatement(std::shared_ptr<CScope> scope);
 	ExprType actualParameter(std::shared_ptr<CScope> scope);
-	ExprType expression(std::shared_ptr<CScope> scope);
-	ExprType simpleExpression(std::shared_ptr<CScope> scope);
-	ExprType term(std::shared_ptr<CScope> scope);
-	ExprType factor(std::shared_ptr<CScope> scope);
-	ExprType functionDesignator(std::shared_ptr<CScope> scope);
+	Value* expression(std::shared_ptr<CScope> scope);
+	Value* simpleExpression(std::shared_ptr<CScope> scope);
+	Value* term(std::shared_ptr<CScope> scope);
+	Value* factor(std::shared_ptr<CScope> scope);
+	Value* functionDesignator(std::shared_ptr<CScope> scope);
 	void structuredStatement(std::shared_ptr<CScope> scope);
 	void ifStatement(std::shared_ptr<CScope> scope);
 	void whileStatement(std::shared_ptr<CScope> scope);

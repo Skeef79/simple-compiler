@@ -10,7 +10,7 @@ void CParser::getNextToken() {
 			try {
 				currentToken = std::move(lexer->getNextToken());
 			}
-			catch (Error& e) {
+			catch (CError& e) {
 				addError(e);
 				goodToken = false;
 			}
@@ -109,7 +109,7 @@ void CParser::skipTo(const std::vector<std::shared_ptr<CToken>>& acceptableToken
 	}
 }
 
-void CParser::addError(Error err) {
+void CParser::addError(CError err) {
 	errorList.push_back(err);
 }
 
@@ -120,17 +120,18 @@ std::shared_ptr<CScope> CParser::initBaseScope() {
 	std::shared_ptr<CScope> scope = std::make_shared<CScope>(nullptr);
 	
 	scope->addType("integer", ExprType::eIntType);
-	scope->addType("string", ExprType::eStringType);
 	scope->addType("real", ExprType::eRealType);
 	scope->addType("boolean", ExprType::eBooleanType);
+
+	//here I need to addIdent and generate true and false
 	scope->addIdent("true", "boolean");
 	scope->addIdent("false", "boolean");
 
 	//writeln and readln only for strings 
 	std::shared_ptr<CFuncParameters> sParams = std::make_unique<CFuncParameters>();
-	sParams->addParameter(std::make_shared<CParameter>(ExprType::eStringType, false));
+	sParams->addParameter(std::make_shared<CParameter>(ExprType::eIntType, false));
 
 	scope->addFunction("writeln", "boolean", sParams);
-	scope->addFunction("readln", "boolean", sParams);
+
 	return scope;
 }

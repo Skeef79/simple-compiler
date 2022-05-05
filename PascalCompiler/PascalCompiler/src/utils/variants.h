@@ -5,21 +5,18 @@
 enum class VariantType {
 	vtInt,
 	vtReal,
-	vtString,
 	vtBoolean
 };
 
 const std::map<std::string, VariantType> strToVariantType = {
 	{"integer", VariantType::vtInt},
 	{"real", VariantType::vtReal},
-	{"string", VariantType::vtString},
 	{"boolean", VariantType::vtBoolean}
 };
 
 const std::map<VariantType, std::string> variantTypeToStr = {
 	{VariantType::vtInt,"integer"},
 	{VariantType::vtReal,"real"},
-	{VariantType::vtString,"string"},
 	{VariantType::vtBoolean,"boolean"}
 };
 
@@ -52,14 +49,6 @@ private:
 	double value;
 };
 
-class CStringVariant : public CVariant {
-public:
-	CStringVariant(std::string value);
-	std::string toString() override;
-	std::string getValue();
-private:
-	std::string value;
-};
 
 class CBooleanVariant : public CVariant {
 public:

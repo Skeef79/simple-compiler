@@ -25,7 +25,7 @@ public:
 	Writer(std::ostream& stream);
 	~Writer();
 	void write(std::string data);
-	void writeError(Error e);
+	void writeError(CError e);
 
 private:
 	std::ostream& stream;

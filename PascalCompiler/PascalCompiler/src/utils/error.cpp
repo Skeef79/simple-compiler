@@ -1,7 +1,7 @@
 #include "error.h"
 #include<iostream>
 
-Error::Error(ErrorCodes errorCode, TextPosition pos, std::string token)
+CError::CError(ErrorCodes errorCode, TextPosition pos, std::string token)
 	:errorCode(errorCode), pos(pos), token(token) {
 	
 	message = errorMessages.at(errorCode);
@@ -16,6 +16,6 @@ Error::Error(ErrorCodes errorCode, TextPosition pos, std::string token)
 		+ token;
 }
 
-const char* Error::what() const throw() {
+const char* CError::what() const throw() {
 	return errorStr.c_str();
 }

@@ -9,22 +9,24 @@ CParser::CParser(CLexer* lexer) {
 		try {
 			token = std::move(this->lexer->getNextToken());
 		}
-		catch (Error& e) {
+		catch (CError& e) {
 			addError(e);
 			goodToken = false;
 		}
 	}
 	tokenPointer = 0;
+
+	gen = std::make_shared<CCodeGenerator>();
 }
 
 //accept functions
 std::shared_ptr<CKeywordToken> CParser::acceptKeyword(KeyWords expectedKeyword) {
 
 	if (!isKeyword())
-		throw Error(ErrorCodes::UnexpectedtTokenType, token->getPosition(), tokenTypeToStr.at(token->getType()));
+		throw CError(ErrorCodes::UnexpectedtTokenType, token->getPosition(), tokenTypeToStr.at(token->getType()));
 
 	if (getTokenKeyword() != expectedKeyword)
-		throw Error(ErrorCodes::ExpectedToken, token->getPosition(), keywordsToStr.at(expectedKeyword));
+		throw CError(ErrorCodes::ExpectedToken, token->getPosition(), keywordsToStr.at(expectedKeyword));
 	auto keywordToken = std::dynamic_pointer_cast<CKeywordToken>(token);
 	getNextToken();
 	return keywordToken;
@@ -32,20 +34,20 @@ std::shared_ptr<CKeywordToken> CParser::acceptKeyword(KeyWords expectedKeyword) 
 
 std::shared_ptr<CConstToken> CParser::acceptConst(VariantType expectedVariantType) {
 	if (!isConst())
-		throw Error(ErrorCodes::UnexpectedtTokenType, token->getPosition(), tokenTypeToStr.at(token->getType()));
+		throw CError(ErrorCodes::UnexpectedtTokenType, token->getPosition(), tokenTypeToStr.at(token->getType()));
 
 	std::shared_ptr<CConstToken> constToken = std::dynamic_pointer_cast<CConstToken>(token);
 	VariantType tokenVariantType = constToken->getValue()->getVariantType();
 
 	if (tokenVariantType != expectedVariantType)
-		throw Error(ErrorCodes::IncorrectConstType, token->getPosition(), variantTypeToStr.at(tokenVariantType));
+		throw CError(ErrorCodes::IncorrectConstType, token->getPosition(), variantTypeToStr.at(tokenVariantType));
 	getNextToken();
 	return constToken;
 }
 
 std::shared_ptr<CIdentToken> CParser::acceptIdent() {
 	if (!isIdent())
-		throw Error(ErrorCodes::UnexpectedtTokenType, token->getPosition(), tokenTypeToStr.at(token->getType()));
+		throw CError(ErrorCodes::UnexpectedtTokenType, token->getPosition(), tokenTypeToStr.at(token->getType()));
 	auto identToken = std::dynamic_pointer_cast<CIdentToken>(token);
 	getNextToken();
 	return identToken;
@@ -74,7 +76,7 @@ void CParser::program(std::shared_ptr<CScope> scope) {
 			acceptKeyword(KeyWords::semicolonSy);
 		}
 	}
-	catch (Error& e) {
+	catch (CError& e) {
 		addError(e);
 		skipTo(acceptableTokens);
 	}
@@ -88,7 +90,7 @@ void CParser::program(std::shared_ptr<CScope> scope) {
 		block(childScope);
 		acceptKeyword(KeyWords::dotSy);
 	}
-	catch (Error& e) {
+	catch (CError& e) {
 		addError(e);
 	}
 
@@ -130,7 +132,7 @@ void CParser::typeDeclarationPart(std::shared_ptr<CScope> scope) {
 			acceptKeyword(KeyWords::semicolonSy);
 		}
 	}
-	catch (Error& e) {
+	catch (CError& e) {
 		addError(e);
 		skipTo(acceptableTokens);
 	}
@@ -142,11 +144,11 @@ void CParser::typeDeclaration(std::shared_ptr<CScope> scope) {
 	auto identType = type(scope);
 
 	if (scope->identDefinedInScope(ident->getIdent())) {
-		addError(Error(ErrorCodes::IdentifierAlreadyDefined, ident->getPosition(), ident->getIdent()));
+		addError(CError(ErrorCodes::IdentifierAlreadyDefined, ident->getPosition(), ident->getIdent()));
 	}
 	else {
 		if (!scope->typeDefined(identType->getIdent())) {
-			addError(Error(ErrorCodes::IdentifierNotDefined, identType->getPosition(), identType->getIdent()));
+			addError(CError(ErrorCodes::IdentifierNotDefined, identType->getPosition(), identType->getIdent()));
 		}
 		else {
 			auto tType = scope->getTypeforType(identType->getIdent());
@@ -157,17 +159,9 @@ void CParser::typeDeclaration(std::shared_ptr<CScope> scope) {
 
 std::shared_ptr<CIdentToken> CParser::type(std::shared_ptr<CScope> scope) {
 	if (isEOF())
-		throw Error(ErrorCodes::UnexpectedToken, token->getPosition(), "EOF");
+		throw CError(ErrorCodes::UnexpectedToken, token->getPosition(), "EOF");
 
-	if (isKeyword())
-		return pointerType(scope);
-	else
-		return identifier(scope);
-}
-
-std::shared_ptr<CIdentToken> CParser::pointerType(std::shared_ptr<CScope> scope) {
-	acceptKeyword(KeyWords::pointerSy);
-	return acceptIdent();
+	return identifier(scope);
 }
 
 void CParser::varDeclarationPart(std::shared_ptr<CScope> scope) {
@@ -184,13 +178,14 @@ void CParser::varDeclarationPart(std::shared_ptr<CScope> scope) {
 			acceptKeyword(KeyWords::semicolonSy);
 		}
 	}
-	catch (Error& e) {
+	catch (CError& e) {
 		addError(e);
 		skipTo(acceptableTokens);
 	}
 
 }
 
+//TODO, there I should createVariable
 void CParser::varDeclaration(std::shared_ptr<CScope> scope) {
 	bool isVarDeclaration = true;
 	std::vector<std::shared_ptr<CIdentToken>> varIdents;
@@ -199,7 +194,7 @@ void CParser::varDeclaration(std::shared_ptr<CScope> scope) {
 		varIdents.push_back(identifier(scope));
 
 		if (!isKeyword())
-			throw Error(ErrorCodes::UnexpectedtTokenType, token->getPosition(), tokenTypeToStr.at(token->getType()));
+			throw CError(ErrorCodes::UnexpectedtTokenType, token->getPosition(), tokenTypeToStr.at(token->getType()));
 
 		if (keywordEquals(KeyWords::commaSy)) {
 			acceptKeyword(KeyWords::commaSy);
@@ -213,12 +208,12 @@ void CParser::varDeclaration(std::shared_ptr<CScope> scope) {
 
 	auto identType = type(scope);
 	if (!scope->typeDefined(identType->getIdent())) {
-		addError(Error(ErrorCodes::IdentifierNotDefined, identType->getPosition(), identType->getIdent()));
+		addError(CError(ErrorCodes::IdentifierNotDefined, identType->getPosition(), identType->getIdent()));
 	}
 	else {
 		for (auto ident : varIdents) {
 			if (scope->identDefinedInScope(ident->getIdent())) {
-				addError(Error(ErrorCodes::IdentifierAlreadyDefined, ident->getPosition(), ident->getIdent()));
+				addError(CError(ErrorCodes::IdentifierAlreadyDefined, ident->getPosition(), ident->getIdent()));
 			}
 			else {
 				scope->addIdent(ident->getIdent(), identType->getIdent());
@@ -241,39 +236,46 @@ void CParser::functionDeclarationPart(std::shared_ptr<CScope> scope) {
 			acceptKeyword(KeyWords::semicolonSy);
 		}
 	}
-	catch (Error& e) {
+	catch (CError& e) {
 		addError(e);
 		skipTo(acceptableTokens);
 	}
 }
 
+//TODO, there I should somehow start creating functions
 void CParser::functionDeclaration(std::shared_ptr<CScope> scope) {
 	auto functionScope = std::make_shared<CScope>(scope);
-	auto [functionIdent, functionType, functionParameters] = functionHeading(functionScope);
+	//auto [functionIdent, functionType, functionParameters] = functionHeading(functionScope);
+	auto funcHeading = functionHeading(functionScope);
+	auto functionIdent = funcHeading.ident;
+	auto functionType = funcHeading.identType;
+	auto functionParameters = funcHeading.parameters;
+
 	if (scope->identDefinedInScope(functionIdent->getIdent())) {
-		addError(Error(ErrorCodes::IdentifierAlreadyDefined, functionIdent->getPosition(), functionIdent->getIdent()));
+		addError(CError(ErrorCodes::IdentifierAlreadyDefined, functionIdent->getPosition(), functionIdent->getIdent()));
 	}
 	if (!scope->typeDefined(functionType->getIdent())) {
-		addError(Error(ErrorCodes::IdentifierNotDefined, functionType->getPosition(), functionType->getIdent()));
+		addError(CError(ErrorCodes::IdentifierNotDefined, functionType->getPosition(), functionType->getIdent()));
 	}
 	scope->addFunction(functionIdent->getIdent(), functionType->getIdent(), functionParameters);
 
 	block(functionScope);
 }
 
+//TODO, there I should add function parameters (alloca and so on)
 CParser::FuncHeading CParser::functionHeading(std::shared_ptr<CScope> scope) {
 	acceptKeyword(KeyWords::functionSy);
 	auto functionIdent = identifier(scope);
 	auto functionParameters = std::make_shared<CFuncParameters>();
 
 	if (!isKeyword())
-		throw Error(ErrorCodes::UnexpectedtTokenType, token->getPosition(), tokenTypeToStr.at(token->getType()));
+		throw CError(ErrorCodes::UnexpectedtTokenType, token->getPosition(), tokenTypeToStr.at(token->getType()));
 
 	if (keywordEquals(KeyWords::colonSy)) {
 		acceptKeyword(KeyWords::colonSy);
 		auto functionType = type(scope);
 		if (!scope->typeDefined(functionType->getIdent())) {
-			addError(Error(ErrorCodes::IdentifierNotDefined, functionType->getPosition(), functionType->getIdent()));
+			addError(CError(ErrorCodes::IdentifierNotDefined, functionType->getPosition(), functionType->getIdent()));
 		}
 
 		acceptKeyword(KeyWords::semicolonSy);
@@ -297,7 +299,7 @@ CParser::FuncHeading CParser::functionHeading(std::shared_ptr<CScope> scope) {
 		acceptKeyword(KeyWords::colonSy);
 		auto functionType = type(scope);
 		if (!scope->typeDefined(functionType->getIdent())) {
-			addError(Error(ErrorCodes::IdentifierNotDefined, functionType->getPosition(), functionType->getIdent()));
+			addError(CError(ErrorCodes::IdentifierNotDefined, functionType->getPosition(), functionType->getIdent()));
 		}
 		acceptKeyword(KeyWords::semicolonSy);
 
@@ -307,6 +309,8 @@ CParser::FuncHeading CParser::functionHeading(std::shared_ptr<CScope> scope) {
 	}
 
 }
+
+//TODO
 std::shared_ptr<CFuncParameters> CParser::formalParameterSection(std::shared_ptr<CScope> scope) {
 	bool byRef = false;
 	if (isKeyword()) {
@@ -317,6 +321,7 @@ std::shared_ptr<CFuncParameters> CParser::formalParameterSection(std::shared_ptr
 	return parameterGroup(scope, byRef);
 }
 
+//TODO
 std::shared_ptr<CFuncParameters> CParser::parameterGroup(std::shared_ptr<CScope> scope, bool byRef = false) {
 	bool isVarDeclaration = true;
 	auto parameters = std::make_shared<CFuncParameters>();
@@ -326,7 +331,7 @@ std::shared_ptr<CFuncParameters> CParser::parameterGroup(std::shared_ptr<CScope>
 		auto ident = identifier(scope);
 		varIdents.push_back(ident);
 		if (!isKeyword())
-			throw Error(ErrorCodes::UnexpectedtTokenType, token->getPosition(), tokenTypeToStr.at(token->getType()));
+			throw CError(ErrorCodes::UnexpectedtTokenType, token->getPosition(), tokenTypeToStr.at(token->getType()));
 
 		if (keywordEquals(KeyWords::commaSy)) {
 			acceptKeyword(KeyWords::commaSy);
@@ -340,7 +345,7 @@ std::shared_ptr<CFuncParameters> CParser::parameterGroup(std::shared_ptr<CScope>
 	auto identType = type(scope);
 	ExprType pType;
 	if (!scope->typeDefined(identType->getIdent())) {
-		addError(Error(ErrorCodes::IdentifierNotDefined, identType->getPosition(), identType->getIdent()));
+		addError(CError(ErrorCodes::IdentifierNotDefined, identType->getPosition(), identType->getIdent()));
 		pType = ExprType::eErrorType;
 	}
 	else {
@@ -349,7 +354,7 @@ std::shared_ptr<CFuncParameters> CParser::parameterGroup(std::shared_ptr<CScope>
 
 	for (auto ident : varIdents) {
 		if (scope->identDefinedInScope(ident->getIdent())) {
-			addError(Error(ErrorCodes::IdentifierAlreadyDefined, ident->getPosition(), ident->getIdent()));
+			addError(CError(ErrorCodes::IdentifierAlreadyDefined, ident->getPosition(), ident->getIdent()));
 		}
 		else {
 			scope->addIdent(ident->getIdent(), identType->getIdent());
@@ -394,7 +399,7 @@ void CParser::statement(std::shared_ptr<CScope> scope) {
 				structuredStatement(scope);
 		}
 	}
-	catch (Error& e) {
+	catch (CError& e) {
 		addError(e);
 		skipTo(acceptableTokens);
 	}
@@ -402,13 +407,13 @@ void CParser::statement(std::shared_ptr<CScope> scope) {
 
 void CParser::simpleStatement(std::shared_ptr<CScope> scope) {
 	if (!isIdent())
-		throw Error(ErrorCodes::UnexpectedtTokenType, token->getPosition(), tokenTypeToStr.at(token->getType()));
+		throw CError(ErrorCodes::UnexpectedtTokenType, token->getPosition(), tokenTypeToStr.at(token->getType()));
 
 	acceptIdent();
 	if (!isKeyword())
-		throw Error(ErrorCodes::UnexpectedtTokenType, token->getPosition(), tokenTypeToStr.at(token->getType()));
+		throw CError(ErrorCodes::UnexpectedtTokenType, token->getPosition(), tokenTypeToStr.at(token->getType()));
 
-	if (keywordEquals(KeyWords::assignSy) || keywordEquals(KeyWords::pointerSy)) {
+	if (keywordEquals(KeyWords::assignSy)) {
 		rollback();
 		assignmentStatement(scope);
 	}
@@ -421,134 +426,202 @@ void CParser::simpleStatement(std::shared_ptr<CScope> scope) {
 
 void CParser::assignmentStatement(std::shared_ptr<CScope> scope) {
 	auto pos = token->getPosition();
-	ExprType varType = variable(scope);
+	auto var = identifier(scope);
+
+	if (!scope->identDefinedGlobal(var->getIdent())) {
+		addError(CError(ErrorCodes::IdentifierNotDefined, var->getPosition(), var->getIdent()));
+		return;
+	}
 
 	acceptKeyword(KeyWords::assignSy);
-	ExprType exprType = expression(scope);
-	if (!isDerived(varType, exprType)) {
-		addError(Error(ErrorCodes::TypeMismatch, pos, exprTypeToStr.at(exprType) + " to " + exprTypeToStr.at(varType)));
+	Value* expr = expression(scope);
+
+	auto varType = scope->getIdentType(var->getIdent());
+
+	if (!gen->isDerived(varType, gen->convertToExprType(expr))) {
+		addError(CError(ErrorCodes::TypeMismatch, pos,
+			exprTypeToStr.at(scope->getIdentType(var->getIdent())) + " to " + exprTypeToStr.at(gen->convertToExprType(expr))));
+		return;
 	}
+
+	gen->createAssignment(var->getIdent(), expr, scope);
 
 }
 
-ExprType CParser::variable(std::shared_ptr<CScope> scope) {
+Value* CParser::variable(std::shared_ptr<CScope> scope) {
 	auto ident = identifier(scope);
 	if (!scope->identDefinedGlobal(ident->getIdent())) {
-		addError(Error(ErrorCodes::IdentifierNotDefined, ident->getPosition(), ident->getIdent()));
-		return ExprType::eErrorType;
+		addError(CError(ErrorCodes::IdentifierNotDefined, ident->getPosition(), ident->getIdent()));
+		return nullptr;
 	}
-	while (isKeyword() && keywordEquals(KeyWords::pointerSy)) {
-		acceptKeyword(KeyWords::pointerSy);
-	}
-	return scope->getIdentType(ident->getIdent());
+
+	auto varName = ident->getIdent();
+	return gen->getValue(varName, scope->getAlloca(varName));
 }
 
-ExprType CParser::expression(std::shared_ptr<CScope> scope) {
+Value* CParser::expression(std::shared_ptr<CScope> scope) {
 	auto pos = token->getPosition();
-	ExprType leftExpr = simpleExpression(scope);
+	Value* leftExpr = simpleExpression(scope);
 
 	if (isKeyword() && isRelationOperator()) {
+		auto operation = getTokenKeyword();
 		acceptKeyword(getTokenKeyword());
-		ExprType rightExpr = simpleExpression(scope);
-		if (!isDerived(leftExpr, rightExpr)) {
-			addError(Error(ErrorCodes::TypeMismatch, pos, exprTypeToStr.at(leftExpr) + " to " + exprTypeToStr.at(rightExpr)));
-			leftExpr = ExprType::eErrorType;
+		Value* rightExpr = simpleExpression(scope);
+
+		if (!leftExpr || !rightExpr)
+			return nullptr;
+
+		auto leftExprType = gen->convertToExprType(leftExpr);
+		auto rightExprType = gen->convertToExprType(rightExpr);
+
+		if (!gen->isDerived(leftExpr, rightExpr)) {
+			addError(CError(ErrorCodes::TypeMismatch, pos,
+				exprTypeToStr.at(leftExprType) + " to " + exprTypeToStr.at(rightExprType)));
+			return nullptr;
 		}
 
-		if (leftExpr != ExprType::eErrorType)
-			leftExpr = rightExpr;
+
+		if (operation == KeyWords::greaterEqualSy || operation == KeyWords::greaterSy) {
+			std::swap(leftExpr, rightExpr);
+			std::swap(leftExprType, rightExprType);
+		}
+
+		if (operation == KeyWords::lessSy || operation == KeyWords::greaterSy) {
+			return gen->createLess(leftExpr, rightExpr);
+		}
+
+		if (operation == KeyWords::lessEqualSy || operation == KeyWords::greaterEqualSy) {
+			return gen->createLessEqual(leftExpr, rightExpr);
+		}
+
+		if (operation == KeyWords::equalSy) {
+			return gen->createEqual(leftExpr, rightExpr);
+		}
+		if (operation == KeyWords::notEqualSy) {
+			return gen->createNotEqual(leftExpr, rightExpr);
+		}
+
 	}
 
 	return leftExpr;
 }
 
-ExprType CParser::simpleExpression(std::shared_ptr<CScope> scope) {
+Value* CParser::simpleExpression(std::shared_ptr<CScope> scope) {
 	auto pos = token->getPosition();
-	ExprType leftTerm = term(scope);
-	
+	Value* leftTerm = term(scope);
+
 	while (isKeyword() && isAddingOperator()) {
-		//TODO: 
-		// operations for types
 
 		auto operation = getTokenKeyword();
 		acceptKeyword(getTokenKeyword());
-		ExprType rightTerm = term(scope);
-		if (!isDerived(leftTerm, rightTerm)) {
-			addError(Error(ErrorCodes::TypeMismatch, pos, exprTypeToStr.at(leftTerm) + " to " + exprTypeToStr.at(rightTerm)));
-			leftTerm = ExprType::eErrorType;
+		Value* rightTerm = term(scope);
+
+		if (!leftTerm || !rightTerm)
+			continue;
+
+		auto leftTermType = gen->convertToExprType(leftTerm);
+		auto rightTermType = gen->convertToExprType(rightTerm);
+
+		if (!gen->isDerived(leftTerm, rightTerm)) {
+			addError(CError(ErrorCodes::TypeMismatch, pos,
+				exprTypeToStr.at(leftTermType) + " to " + exprTypeToStr.at(rightTermType)));
+			leftTerm = nullptr;
 		}
 		else {
-			//we can sum everything 
+			//can't sum boolean
 			if (operation == KeyWords::plusSy) {
-				leftTerm = rightTerm;
+				if (leftTermType == ExprType::eBooleanType || rightTermType == ExprType::eBooleanType) {
+					addError(CError(ErrorCodes::TypeMismatch, pos,
+						exprTypeToStr.at(leftTermType) + " to " + exprTypeToStr.at(rightTermType)));
+					leftTerm = nullptr;
+				}
+				else {
+					leftTerm = gen->createAdd(leftTerm, leftTerm);
+				}
 			}
-			//minus can't applied to string
+
+			//can't sub boolean
 			if (operation == KeyWords::minusSy) {
-				if (leftTerm == ExprType::eStringType) {
-					addError(Error(ErrorCodes::TypeMismatch, pos, exprTypeToStr.at(leftTerm) + " to " + exprTypeToStr.at(rightTerm)));
-					leftTerm = ExprType::eErrorType;
+				if (leftTermType == ExprType::eBooleanType || rightTermType == ExprType::eBooleanType) {
+					addError(CError(ErrorCodes::TypeMismatch, pos,
+						exprTypeToStr.at(leftTermType) + " to " + exprTypeToStr.at(rightTermType)));
+					leftTerm = nullptr;
 				}
 				else {
-					leftTerm = rightTerm;
+					leftTerm = gen->createSub(leftTerm, leftTerm);
 				}
 			}
-			//should be bool or convertable to bool
+
+			//should be bool
 			if (operation == KeyWords::orSy) {
-				if (leftTerm == ExprType::eStringType) {
-					addError(Error(ErrorCodes::TypeMismatch, pos, exprTypeToStr.at(leftTerm) + " to " + exprTypeToStr.at(rightTerm)));
-					leftTerm = ExprType::eErrorType;
+				if (!(leftTermType == ExprType::eBooleanType && rightTermType == ExprType::eBooleanType)) {
+					addError(CError(ErrorCodes::TypeMismatch, pos,
+						exprTypeToStr.at(leftTermType) + " to " + exprTypeToStr.at(rightTermType)));
+					leftTerm = nullptr;
 				}
 				else {
-					leftTerm = rightTerm;
+					leftTerm = gen->createOr(leftTerm, rightTerm);
 				}
 			}
 		}
-
 	}
+
 	return leftTerm;
 }
 
 
-ExprType CParser::term(std::shared_ptr<CScope> scope) {
+Value* CParser::term(std::shared_ptr<CScope> scope) {
 	auto pos = token->getPosition();
-	ExprType leftFactor = factor(scope);
+	Value* leftFactor = factor(scope);
+
 	while (isKeyword() && isMultiplyingOperator()) {
 		auto operation = getTokenKeyword();
 		acceptKeyword(getTokenKeyword());
-		ExprType rightFactor = factor(scope);
-		if (!isDerived(leftFactor, rightFactor)) {
-			addError(Error(ErrorCodes::TypeMismatch, pos, exprTypeToStr.at(leftFactor) + " to " + exprTypeToStr.at(rightFactor)));
-			leftFactor = ExprType::eErrorType;
+		Value* rightFactor = factor(scope);
+
+		if (!leftFactor || !rightFactor)
+			continue;
+
+		auto leftFactorType = gen->convertToExprType(leftFactor);
+		auto rightFactorType = gen->convertToExprType(rightFactor);
+
+		if (!gen->isDerived(leftFactor, rightFactor)) {
+			addError(CError(ErrorCodes::TypeMismatch, pos,
+				exprTypeToStr.at(leftFactorType) + " to " + exprTypeToStr.at(rightFactorType)));
+			leftFactor = nullptr;
 		}
 		else {
-			//can't 'multiply' strings
+			//can't 'multiply' boolean
 			if (operation == KeyWords::multiplySy) {
-				if (leftFactor == ExprType::eStringType) {
-					addError(Error(ErrorCodes::TypeMismatch, pos, exprTypeToStr.at(leftFactor) + " to " + exprTypeToStr.at(rightFactor)));
-					leftFactor = ExprType::eErrorType;
+				if (leftFactorType == ExprType::eBooleanType || rightFactorType == ExprType::eBooleanType) {
+					addError(CError(ErrorCodes::TypeMismatch, pos,
+						exprTypeToStr.at(leftFactorType) + " to " + exprTypeToStr.at(rightFactorType)));
+					leftFactor = nullptr;
 				}
 				else {
-					leftFactor = rightFactor;
+					leftFactor = gen->createMult(leftFactor, rightFactor);
 				}
 			}
-			//can't 'divide' strings
+			//can't 'divide' boolean
 			if (operation == KeyWords::divisionSy) {
-				if (leftFactor == ExprType::eStringType) {
-					addError(Error(ErrorCodes::TypeMismatch, pos, exprTypeToStr.at(leftFactor) + " to " + exprTypeToStr.at(rightFactor)));
-					leftFactor = ExprType::eErrorType;
+				if (leftFactorType == ExprType::eBooleanType || rightFactorType == ExprType::eBooleanType) {
+					addError(CError(ErrorCodes::TypeMismatch, pos,
+						exprTypeToStr.at(leftFactorType) + " to " + exprTypeToStr.at(rightFactorType)));
+					leftFactor = nullptr;
 				}
 				else {
-					leftFactor = rightFactor;
+					leftFactor = gen->createDivide(leftFactor, rightFactor);
 				}
 			}
-			//can't 'and' strings
+			//can only and boolean
 			if (operation == KeyWords::andSy) {
-				if (leftFactor == ExprType::eStringType) {
-					addError(Error(ErrorCodes::TypeMismatch, pos, exprTypeToStr.at(leftFactor) + " to " + exprTypeToStr.at(rightFactor)));
-					leftFactor = ExprType::eErrorType;
+				if (!(leftFactorType == ExprType::eBooleanType && rightFactorType == ExprType::eBooleanType)) {
+					addError(CError(ErrorCodes::TypeMismatch, pos,
+						exprTypeToStr.at(leftFactorType) + " to " + exprTypeToStr.at(rightFactorType)));
+					leftFactor = nullptr;
 				}
 				else {
-					leftFactor = rightFactor;
+					leftFactor = gen->createAdd(leftFactor, rightFactor);
 				}
 			}
 		}
@@ -557,17 +630,47 @@ ExprType CParser::term(std::shared_ptr<CScope> scope) {
 	return leftFactor;
 }
 
-ExprType CParser::factor(std::shared_ptr<CScope> scope) { //bool isUnary?
+Value* CParser::factor(std::shared_ptr<CScope> scope) { //bool isUnary?
 	if (isUnaryOperator()) {
-		//can't be string
-		acceptKeyword(getTokenKeyword());
-		return factor(scope);
+
+		auto op = acceptKeyword(getTokenKeyword());
+		auto pos = op->getPosition();
+		auto value = factor(scope);
+
+		if (!value)
+			return nullptr;
+
+		if (op->getKeyword() == KeyWords::notSy) {
+			if (gen->convertToExprType(value) == ExprType::eBooleanType) {
+				return gen->createNot(value);
+			}
+			else {
+				addError(CError(ErrorCodes::TypeMismatch, pos, "not can be applied only for boolean types"));
+				return nullptr;
+			}
+		}
+		else {
+			if (gen->convertToExprType(value) == ExprType::eBooleanType) {
+				addError(CError(ErrorCodes::TypeMismatch, pos, "Can't apply to boolean type"));
+				return nullptr;
+			}
+			else {
+				if (op->getKeyword() == KeyWords::plusSy)
+					return value;
+				else
+					return gen->createSub(gen->getConstInt(std::make_shared<CIntVariant>(0)), value);
+			}
+		}
 	}
 
 	if (isConst()) {
 		auto constToken = acceptConst(getTokenVariantType());
 		auto variantType = constToken->getValue()->getVariantType();
-		return variantTypeToExprType.at(variantType);
+		auto exprType = variantTypeToExprType.at(variantType);
+		if (exprType == ExprType::eIntType)
+			return gen->getConstInt(std::dynamic_pointer_cast<CIntVariant>(constToken));
+		if (exprType == ExprType::eRealType)
+			return gen->getConstReal(std::dynamic_pointer_cast<CRealVariant>(constToken));
 	}
 
 	if (isIdent()) {
@@ -583,17 +686,18 @@ ExprType CParser::factor(std::shared_ptr<CScope> scope) { //bool isUnary?
 			}
 		}
 		else {
-			addError(Error(ErrorCodes::IdentifierNotDefined, ident->getPosition(), ident->getIdent()));
-			return ExprType::eErrorType;
+			addError(CError(ErrorCodes::IdentifierNotDefined, ident->getPosition(), ident->getIdent()));
+			return nullptr;
 		}
 	}
 
 	acceptKeyword(KeyWords::leftParSy);
-	ExprType exprType = expression(scope);
+	Value* exprType = expression(scope);
 	acceptKeyword(KeyWords::rightParSy);
 	return exprType;
 }
 
+//TODO,
 void CParser::procedureStatement(std::shared_ptr<CScope> scope) {
 	auto pos = token->getPosition();
 	auto functionIdent = acceptIdent();
@@ -615,18 +719,18 @@ void CParser::procedureStatement(std::shared_ptr<CScope> scope) {
 	}
 
 	if (!scope->identDefinedGlobal(functionIdent->getIdent())) {
-		addError(Error(ErrorCodes::IdentifierNotDefined, functionIdent->getPosition(), functionIdent->getIdent()));
+		addError(CError(ErrorCodes::IdentifierNotDefined, functionIdent->getPosition(), functionIdent->getIdent()));
 		return;
 	}
 
 	if (!compareParams(parameters, scope->getFunctionParameters(functionIdent->getIdent()))) {
-		addError(Error(ErrorCodes::IncorrectParameters, pos, ""));
+		addError(CError(ErrorCodes::IncorrectParameters, pos, ""));
 	}
 
 }
 
-
-ExprType CParser::functionDesignator(std::shared_ptr<CScope> scope) {
+//TODO
+Value* CParser::functionDesignator(std::shared_ptr<CScope> scope) {
 	auto pos = token->getPosition();
 	auto functionIdent = acceptIdent();
 	std::vector<ExprType> parameters;
@@ -646,12 +750,12 @@ ExprType CParser::functionDesignator(std::shared_ptr<CScope> scope) {
 	}
 
 	if (!scope->identDefinedGlobal(functionIdent->getIdent())) {
-		addError(Error(ErrorCodes::IdentifierNotDefined, functionIdent->getPosition(), functionIdent->getIdent()));
+		addError(CError(ErrorCodes::IdentifierNotDefined, functionIdent->getPosition(), functionIdent->getIdent()));
 		return ExprType::eErrorType;
 	}
 
 	if (!compareParams(parameters, scope->getFunctionParameters(functionIdent->getIdent()))) {
-		addError(Error(ErrorCodes::IncorrectParameters,pos, ""));
+		addError(CError(ErrorCodes::IncorrectParameters, pos, ""));
 	}
 	return scope->getIdentType(functionIdent->getIdent());
 }
@@ -662,7 +766,7 @@ ExprType CParser::actualParameter(std::shared_ptr<CScope> scope) {
 
 void CParser::structuredStatement(std::shared_ptr<CScope> scope) {
 	if (!isKeyword())
-		throw Error(ErrorCodes::UnexpectedtTokenType, token->getPosition(), tokenTypeToStr.at(token->getType()));
+		throw CError(ErrorCodes::UnexpectedtTokenType, token->getPosition(), tokenTypeToStr.at(token->getType()));
 
 	if (keywordEquals(KeyWords::beginSy)) {
 		compoundStatement(scope);
@@ -678,15 +782,16 @@ void CParser::structuredStatement(std::shared_ptr<CScope> scope) {
 		return;
 	}
 
-	throw Error(ErrorCodes::UnexpectedKeyword, token->getPosition(), keywordsToStr.at(getTokenKeyword()));
+	throw CError(ErrorCodes::UnexpectedKeyword, token->getPosition(), keywordsToStr.at(getTokenKeyword()));
 }
 
+//TODO
 void CParser::ifStatement(std::shared_ptr<CScope> scope) {
 	acceptKeyword(KeyWords::ifSy);
 	auto pos = token->getPosition();
 	ExprType exprType = expression(scope);
 	if (!isDerived(exprType, ExprType::eBooleanType)) {
-		addError(Error(ErrorCodes::IncorrectExprType, pos, exprTypeToStr.at(exprType)));
+		addError(CError(ErrorCodes::IncorrectExprType, pos, exprTypeToStr.at(exprType)));
 	}
 
 	acceptKeyword(KeyWords::thenSy);
@@ -697,12 +802,13 @@ void CParser::ifStatement(std::shared_ptr<CScope> scope) {
 	}
 }
 
+//TODO
 void CParser::whileStatement(std::shared_ptr<CScope> scope) {
 	acceptKeyword(KeyWords::whileSy);
 	auto pos = token->getPosition();
 	ExprType exprType = expression(scope);
-	if (!isDerived(exprType,ExprType::eBooleanType)) {
-		addError(Error(ErrorCodes::IncorrectExprType, pos, exprTypeToStr.at(exprType)));
+	if (!isDerived(exprType, ExprType::eBooleanType)) {
+		addError(CError(ErrorCodes::IncorrectExprType, pos, exprTypeToStr.at(exprType)));
 	}
 	acceptKeyword(KeyWords::doSy);
 	statement(scope);

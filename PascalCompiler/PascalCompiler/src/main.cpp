@@ -12,14 +12,20 @@
 //PascalCompiler.exe file.pas
 int main(int argc, char** argv) {
 
-	std::string fileName(argv[1]);
+	//std::string fileName(argv[1]);
 
-	std::cout << fileName << std::endl;
+	//std::cout << fileName << std::endl;
 
-	//std::string fileName = "tests/Semantic/incorrect2.pas";
+
+	std::string fileName = "tests/Semantic/simple.pas";
 
 	std::ifstream fstream(fileName);
 
+	if (fstream.fail()) {
+		std::cout << "Can't open: " + fileName;
+		return 1;
+	}
+	
 	std::unique_ptr<Reader> reader = std::make_unique<Reader>(fstream);
 	std::unique_ptr<CLexer> lexer = std::make_unique<CLexer>(reader.release());
 	std::unique_ptr<CParser> parser = std::make_unique<CParser>(lexer.release());
