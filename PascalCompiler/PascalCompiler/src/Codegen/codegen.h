@@ -45,6 +45,7 @@ public:
 	void createVariable(std::string varName, std::string varType, std::shared_ptr<CScope>& scope);
 	void createAssignment(std::string varName, Value* value, std::shared_ptr<CScope>& scope);
 
+
 	Value* getValue(std::string varName, AllocaInst* alloca);
 	Value* getConstInt(std::shared_ptr<CIntVariant> value);
 	Value* getConstReal(std::shared_ptr<CRealVariant>value);
@@ -64,6 +65,14 @@ public:
 	Value* createLessEqual(Value* leftValue, Value* rightValue);
 	Value* createEqual(Value* leftValue, Value* rightValue);
 	Value* createNotEqual(Value* leftValue, Value* rightValue);
+
+	Function* initFunction(std::string funcName, Type* funcType, std::shared_ptr<CFuncParameters> funcParameters);
+	BasicBlock* createBlock(Function* function);
+	void setInsertionPoint(BasicBlock* block);
+	void initFunctionParams(Function* function, std::shared_ptr<CFuncParameters>funcParameters, std::shared_ptr<CScope> scope);
+	BasicBlock* getInsertionBlock();
+	void createReturn(Function* function, Value* value);
+
 
 private:
 	std::unique_ptr<LLVMContext> context;

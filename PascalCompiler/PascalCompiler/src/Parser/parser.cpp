@@ -185,7 +185,6 @@ void CParser::varDeclarationPart(std::shared_ptr<CScope> scope) {
 
 }
 
-//TODO, there I should createVariable
 void CParser::varDeclaration(std::shared_ptr<CScope> scope) {
 	bool isVarDeclaration = true;
 	std::vector<std::shared_ptr<CIdentToken>> varIdents;
@@ -216,7 +215,7 @@ void CParser::varDeclaration(std::shared_ptr<CScope> scope) {
 				addError(CError(ErrorCodes::IdentifierAlreadyDefined, ident->getPosition(), ident->getIdent()));
 			}
 			else {
-				scope->addIdent(ident->getIdent(), identType->getIdent());
+				gen->createVariable(ident->getIdent(), identType->getIdent(), scope);
 			}
 		}
 	}
@@ -242,27 +241,75 @@ void CParser::functionDeclarationPart(std::shared_ptr<CScope> scope) {
 	}
 }
 
-//TODO, there I should somehow start creating functions
+//Okay now comes a hard part, it is time to do everything UP!
+
 void CParser::functionDeclaration(std::shared_ptr<CScope> scope) {
 	auto functionScope = std::make_shared<CScope>(scope);
 	//auto [functionIdent, functionType, functionParameters] = functionHeading(functionScope);
 	auto funcHeading = functionHeading(functionScope);
-	auto functionIdent = funcHeading.ident;
-	auto functionType = funcHeading.identType;
-	auto functionParameters = funcHeading.parameters;
+	auto funcIdent = funcHeading.ident;
+	auto funcType = funcHeading.identType;
+	auto funcParameters = funcHeading.parameters;
 
-	if (scope->identDefinedInScope(functionIdent->getIdent())) {
-		addError(CError(ErrorCodes::IdentifierAlreadyDefined, functionIdent->getPosition(), functionIdent->getIdent()));
+	bool functionOk = true;
+	if (scope->identDefinedInScope(funcIdent->getIdent())) {
+		addError(CError(ErrorCodes::IdentifierAlreadyDefined, funcIdent->getPosition(), funcIdent->getIdent()));
+		functionOk = false;
 	}
-	if (!scope->typeDefined(functionType->getIdent())) {
-		addError(CError(ErrorCodes::IdentifierNotDefined, functionType->getPosition(), functionType->getIdent()));
+	if (!scope->typeDefined(funcType->getIdent())) {
+		addError(CError(ErrorCodes::IdentifierNotDefined, funcType->getPosition(), funcType->getIdent()));
+		functionOk = false;
 	}
-	scope->addFunction(functionIdent->getIdent(), functionType->getIdent(), functionParameters);
 
-	block(functionScope);
+	bool paramsOk = true;
+	for (int i = 0; i < funcParameters->parameters.size(); i++) {
+		if (funcParameters->parameters[i]->getType() == ExprType::eErrorType) {
+			paramsOk = false;
+			break;
+		}
+	}
+
+	if (!paramsOk) {
+		addError(CError(ErrorCodes::IncorrectParameters, funcIdent->getPosition(), funcIdent->getIdent()));
+	}
+
+	if (!functionOk || !paramsOk) {
+		block(functionScope);
+		return;
+	}
+
+
+	auto function = gen->initFunction(
+		funcIdent->getIdent(),
+		gen->convertToTypePtr(scope->getTypeforType(funcType->getIdent())),
+		funcParameters);
+
+	scope->addFunction(funcIdent->getIdent(), funcType->getIdent(), funcParameters);
+	gen->createVariable(funcIdent->getIdent(), funcType->getIdent(), functionScope);
+
+	//define a block and create allocas
+	auto parentBlock = gen->getInsertionBlock();
+	auto body = gen->createBlock(function);
+
+	gen->setInsertionPoint(body);
+	gen->initFunctionParams(function, funcParameters, functionScope);
+
+	try {
+		block(functionScope);
+	}
+	catch (CError err) {
+		function->eraseFromParent();
+	}
+
+	gen->createReturn(function, gen->getValue(funcIdent->getIdent(), functionScope->getAlloca(funcIdent->getIdent())));
+	
+	verifyFunction(*function);
+	
+	//setup previous block to insert
+	gen->setInsertionPoint(parentBlock);
 }
 
-//TODO, there I should add function parameters (alloca and so on)
+
 CParser::FuncHeading CParser::functionHeading(std::shared_ptr<CScope> scope) {
 	acceptKeyword(KeyWords::functionSy);
 	auto functionIdent = identifier(scope);
@@ -279,8 +326,6 @@ CParser::FuncHeading CParser::functionHeading(std::shared_ptr<CScope> scope) {
 		}
 
 		acceptKeyword(KeyWords::semicolonSy);
-		scope->addFunction(functionIdent->getIdent(), functionType->getIdent(), functionParameters);
-		scope->addIdent(functionIdent->getIdent(), functionType->getIdent());
 		return { functionIdent, functionType, functionParameters };
 	}
 	else {
@@ -303,14 +348,11 @@ CParser::FuncHeading CParser::functionHeading(std::shared_ptr<CScope> scope) {
 		}
 		acceptKeyword(KeyWords::semicolonSy);
 
-		scope->addFunction(functionIdent->getIdent(), functionType->getIdent(), functionParameters);
-		scope->addIdent(functionIdent->getIdent(), functionType->getIdent());
 		return { functionIdent, functionType, functionParameters };
 	}
 
 }
 
-//TODO
 std::shared_ptr<CFuncParameters> CParser::formalParameterSection(std::shared_ptr<CScope> scope) {
 	bool byRef = false;
 	if (isKeyword()) {
@@ -321,7 +363,7 @@ std::shared_ptr<CFuncParameters> CParser::formalParameterSection(std::shared_ptr
 	return parameterGroup(scope, byRef);
 }
 
-//TODO
+
 std::shared_ptr<CFuncParameters> CParser::parameterGroup(std::shared_ptr<CScope> scope, bool byRef = false) {
 	bool isVarDeclaration = true;
 	auto parameters = std::make_shared<CFuncParameters>();
@@ -356,10 +398,8 @@ std::shared_ptr<CFuncParameters> CParser::parameterGroup(std::shared_ptr<CScope>
 		if (scope->identDefinedInScope(ident->getIdent())) {
 			addError(CError(ErrorCodes::IdentifierAlreadyDefined, ident->getPosition(), ident->getIdent()));
 		}
-		else {
-			scope->addIdent(ident->getIdent(), identType->getIdent());
-		}
-		parameters->addParameter(std::make_shared<CParameter>(pType, byRef));
+
+		parameters->addParameter(std::make_shared<CParameter>(ident->getIdent(), identType->getIdent(), pType, byRef));
 	}
 
 	return parameters;
@@ -697,7 +737,7 @@ Value* CParser::factor(std::shared_ptr<CScope> scope) { //bool isUnary?
 	return exprType;
 }
 
-//TODO,
+//TODO (I should call function now!)
 void CParser::procedureStatement(std::shared_ptr<CScope> scope) {
 	auto pos = token->getPosition();
 	auto functionIdent = acceptIdent();
@@ -729,7 +769,7 @@ void CParser::procedureStatement(std::shared_ptr<CScope> scope) {
 
 }
 
-//TODO
+//TODO I should call fucntion now and verify parameters and so on
 Value* CParser::functionDesignator(std::shared_ptr<CScope> scope) {
 	auto pos = token->getPosition();
 	auto functionIdent = acceptIdent();

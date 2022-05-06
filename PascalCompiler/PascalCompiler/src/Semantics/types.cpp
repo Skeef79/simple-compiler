@@ -1,15 +1,23 @@
 #include "types.h"
 
 
-CParameter::CParameter(ExprType pType, bool byRef)
-	: pType(pType), byRef(byRef) {}
+CParameter::CParameter(std::string name, std::string strType, ExprType pType, bool byRef)
+	: pName(name), strType(strType), pType(pType), byRef(byRef) {}
 
 ExprType CParameter::getType() {
 	return pType;
 }
 
+std::string CParameter::getStrType() {
+	return strType;
+}
+
 bool CParameter::isRef() {
 	return byRef;
+}
+
+std::string CParameter::getName() {
+	return pName;
 }
 
 CFuncParameters::CFuncParameters(std::vector<std::shared_ptr<CParameter>> params) {

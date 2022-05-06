@@ -7,7 +7,7 @@ CCodeGenerator::CCodeGenerator() {
 }
 
 void CCodeGenerator::initTypes() {
-	exprTypeToTypePtr[ExprType::eBooleanType] = builder->getInt8Ty();
+	exprTypeToTypePtr[ExprType::eBooleanType] = builder->getInt1Ty();
 	typePtrToExprType[builder->getInt1Ty()->getTypeID()] = ExprType::eBooleanType;
 
 	exprTypeToTypePtr[ExprType::eIntType] = builder->getInt32Ty();
@@ -316,4 +316,47 @@ void CCodeGenerator::createAssignment(std::string varName, Value* value, std::sh
 	}
 
 }
+
+
+Function* CCodeGenerator::initFunction(std::string funcName, Type* funcType, std::shared_ptr<CFuncParameters> funcParameters) {
+	std::vector<Type*>paramTypes(funcParameters->parameters.size());
+	for (int i = 0; i < funcParameters->parameters.size(); i++) {
+		paramTypes[i] = convertToTypePtr(funcParameters->parameters[i]->getType());
+	}
+
+	auto functionType = FunctionType::get(funcType,
+		paramTypes, false);
+	auto function = Function::Create(functionType, Function::ExternalLinkage, funcName, module.get());
+	int i = 0;
+	for (auto& arg : function->args()) {
+		arg.setName(funcParameters->parameters[i]->getName());
+		i++;
+	}
+
+	return function;
+}
+
+BasicBlock* CCodeGenerator::createBlock(Function* function) {
+	return BasicBlock::Create(*context, "entry", function);
+}
+
+void CCodeGenerator::setInsertionPoint(BasicBlock* block) {
+	builder->SetInsertPoint(block);
+}
+
+//create variables for function parameters
+void CCodeGenerator::initFunctionParams(Function* function, std::shared_ptr<CFuncParameters> funcParameters, std::shared_ptr<CScope> scope) {
+	for (auto param : funcParameters->parameters) {
+		createVariable(param->getName(), param->getStrType(), scope);
+	}
+}
+
+BasicBlock* CCodeGenerator::getInsertionBlock() {
+	return builder->GetInsertBlock();
+}
+
+void CCodeGenerator::createReturn(Function* function, Value* value) {
+	builder->CreateRet(value);
+}
+
 

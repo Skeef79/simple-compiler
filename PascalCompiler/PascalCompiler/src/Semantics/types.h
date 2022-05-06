@@ -27,10 +27,15 @@ const std::map<VariantType, ExprType> variantTypeToExprType{
 
 class CParameter {
 public:
-	CParameter(ExprType pType, bool byRef);
+	CParameter(std::string name, std::string strType, ExprType pType, bool byRef);
 	ExprType getType();
+	std::string getName();
+	std::string getStrType();
 	bool isRef();
+
 private:
+	std::string pName;
+	std::string strType;
 	ExprType pType;
 	bool byRef;
 };
