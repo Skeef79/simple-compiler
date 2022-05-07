@@ -11,6 +11,8 @@ public:
 	void getNextToken();
 	void parse();
 	std::vector<CError> errorList;
+	void printGeneratedCode();
+	void compile(std::string filename);
 
 private:
 	//store the buffer of BUFF_SIZE elements
@@ -119,7 +121,7 @@ private:
 	void assignmentStatement(std::shared_ptr<CScope> scope);
 	Value* variable(std::shared_ptr<CScope> scope);
 	void procedureStatement(std::shared_ptr<CScope> scope);
-	ExprType actualParameter(std::shared_ptr<CScope> scope);
+	Value* actualParameter(std::shared_ptr<CScope> scope);
 	Value* expression(std::shared_ptr<CScope> scope);
 	Value* simpleExpression(std::shared_ptr<CScope> scope);
 	Value* term(std::shared_ptr<CScope> scope);

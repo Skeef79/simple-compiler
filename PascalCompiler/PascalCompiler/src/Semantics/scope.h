@@ -20,9 +20,14 @@ public:
 	bool identDefinedGlobal(std::string ident);
 	bool typeDefined(std::string ident);
 	void addIdent(std::string ident, std::string identType);
-	void addFunction(std::string ident, std::string functionType, std::shared_ptr<CFuncParameters> fParams);
-	void addType(std::string ident, ExprType exprType);
+	void addFunction(std::string ident, 
+		std::string functionType, 
+		std::shared_ptr<CFuncParameters> fParams,
+		Function* functinPtr);
 	bool isFunction(std::string ident);
+	Function* getFunctionPtr(std::string ident);
+
+	void addType(std::string ident, ExprType exprType);
 	void addAlloca(std::string ident, AllocaInst* alloca);
 	AllocaInst* getAlloca(std::string ident);
 
@@ -31,6 +36,7 @@ private:
 	std::map<std::string, std::string>idents;
 	std::map<std::string, ExprType> types;
 	std::map<std::string, std::shared_ptr<CFuncParameters>> functions;
+	std::map<std::string, Function*> functionPtrs;
 
 	//store allocas to variables (names same as in idents)
 	std::map<std::string, AllocaInst*> varAllocas;

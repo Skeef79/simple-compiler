@@ -19,6 +19,13 @@ CParser::CParser(CLexer* lexer) {
 	gen = std::make_shared<CCodeGenerator>();
 }
 
+void CParser::printGeneratedCode() {
+	gen->printCode();
+}
+
+void CParser::compile(std::string filename) {
+	gen->compileObjectTarget(filename.c_str());
+}
 //accept functions
 std::shared_ptr<CKeywordToken> CParser::acceptKeyword(KeyWords expectedKeyword) {
 
@@ -94,6 +101,8 @@ void CParser::program(std::shared_ptr<CScope> scope) {
 		addError(e);
 	}
 
+	auto function = gen->getCurrentFunction();
+	gen->createReturn(function, ConstantInt::get(gen->convertToTypePtr(ExprType::eIntType), 0));
 }
 
 void CParser::block(std::shared_ptr<CScope> scope) {
@@ -284,7 +293,7 @@ void CParser::functionDeclaration(std::shared_ptr<CScope> scope) {
 		gen->convertToTypePtr(scope->getTypeforType(funcType->getIdent())),
 		funcParameters);
 
-	scope->addFunction(funcIdent->getIdent(), funcType->getIdent(), funcParameters);
+	scope->addFunction(funcIdent->getIdent(), funcType->getIdent(), funcParameters, function);
 	gen->createVariable(funcIdent->getIdent(), funcType->getIdent(), functionScope);
 
 	//define a block and create allocas
@@ -302,9 +311,9 @@ void CParser::functionDeclaration(std::shared_ptr<CScope> scope) {
 	}
 
 	gen->createReturn(function, gen->getValue(funcIdent->getIdent(), functionScope->getAlloca(funcIdent->getIdent())));
-	
+
 	verifyFunction(*function);
-	
+
 	//setup previous block to insert
 	gen->setInsertionPoint(parentBlock);
 }
@@ -576,7 +585,7 @@ Value* CParser::simpleExpression(std::shared_ptr<CScope> scope) {
 					leftTerm = nullptr;
 				}
 				else {
-					leftTerm = gen->createAdd(leftTerm, leftTerm);
+					leftTerm = gen->createAdd(leftTerm, rightTerm);
 				}
 			}
 
@@ -588,7 +597,7 @@ Value* CParser::simpleExpression(std::shared_ptr<CScope> scope) {
 					leftTerm = nullptr;
 				}
 				else {
-					leftTerm = gen->createSub(leftTerm, leftTerm);
+					leftTerm = gen->createSub(leftTerm, rightTerm);
 				}
 			}
 
@@ -708,9 +717,9 @@ Value* CParser::factor(std::shared_ptr<CScope> scope) { //bool isUnary?
 		auto variantType = constToken->getValue()->getVariantType();
 		auto exprType = variantTypeToExprType.at(variantType);
 		if (exprType == ExprType::eIntType)
-			return gen->getConstInt(std::dynamic_pointer_cast<CIntVariant>(constToken));
+			return gen->getConstInt(std::dynamic_pointer_cast<CIntVariant>(constToken->getValue()));
 		if (exprType == ExprType::eRealType)
-			return gen->getConstReal(std::dynamic_pointer_cast<CRealVariant>(constToken));
+			return gen->getConstReal(std::dynamic_pointer_cast<CRealVariant>(constToken->getValue()));
 	}
 
 	if (isIdent()) {
@@ -741,7 +750,7 @@ Value* CParser::factor(std::shared_ptr<CScope> scope) { //bool isUnary?
 void CParser::procedureStatement(std::shared_ptr<CScope> scope) {
 	auto pos = token->getPosition();
 	auto functionIdent = acceptIdent();
-	std::vector<ExprType> parameters;
+	std::vector<Value*> parameters;
 
 	if (isKeyword() && keywordEquals(KeyWords::leftParSy)) {
 		acceptKeyword(KeyWords::leftParSy);
@@ -763,22 +772,25 @@ void CParser::procedureStatement(std::shared_ptr<CScope> scope) {
 		return;
 	}
 
-	if (!compareParams(parameters, scope->getFunctionParameters(functionIdent->getIdent()))) {
+	if (!gen->compareParams(parameters, scope->getFunctionParameters(functionIdent->getIdent()))) {
 		addError(CError(ErrorCodes::IncorrectParameters, pos, ""));
 	}
 
+	auto function = scope->getFunctionPtr(functionIdent->getIdent());
+	gen->createCall(function, parameters);
 }
 
-//TODO I should call fucntion now and verify parameters and so on
+
 Value* CParser::functionDesignator(std::shared_ptr<CScope> scope) {
 	auto pos = token->getPosition();
 	auto functionIdent = acceptIdent();
-	std::vector<ExprType> parameters;
+	std::vector<Value*> parameters;
 	if (isKeyword() && keywordEquals(KeyWords::leftParSy)) {
 		acceptKeyword(KeyWords::leftParSy);
 		if (isKeyword() && keywordEquals(KeyWords::rightParSy)) {
 			acceptKeyword(KeyWords::rightParSy);
 		}
+
 		else {
 			parameters.push_back(actualParameter(scope));
 			while (isKeyword() && keywordEquals(KeyWords::commaSy)) {
@@ -791,16 +803,19 @@ Value* CParser::functionDesignator(std::shared_ptr<CScope> scope) {
 
 	if (!scope->identDefinedGlobal(functionIdent->getIdent())) {
 		addError(CError(ErrorCodes::IdentifierNotDefined, functionIdent->getPosition(), functionIdent->getIdent()));
-		return ExprType::eErrorType;
+		return nullptr;
 	}
 
-	if (!compareParams(parameters, scope->getFunctionParameters(functionIdent->getIdent()))) {
+	if (!gen->compareParams(parameters, scope->getFunctionParameters(functionIdent->getIdent()))) {
 		addError(CError(ErrorCodes::IncorrectParameters, pos, ""));
+		return nullptr;
 	}
-	return scope->getIdentType(functionIdent->getIdent());
+
+	auto function = scope->getFunctionPtr(functionIdent->getIdent());
+	return gen->createCall(function, parameters);
 }
 
-ExprType CParser::actualParameter(std::shared_ptr<CScope> scope) {
+Value* CParser::actualParameter(std::shared_ptr<CScope> scope) {
 	return expression(scope);
 }
 
@@ -829,29 +844,97 @@ void CParser::structuredStatement(std::shared_ptr<CScope> scope) {
 void CParser::ifStatement(std::shared_ptr<CScope> scope) {
 	acceptKeyword(KeyWords::ifSy);
 	auto pos = token->getPosition();
-	ExprType exprType = expression(scope);
-	if (!isDerived(exprType, ExprType::eBooleanType)) {
-		addError(CError(ErrorCodes::IncorrectExprType, pos, exprTypeToStr.at(exprType)));
+
+	Value* condition = expression(scope);
+	bool conditionOk = true;
+
+	if (!gen->isDerived(gen->convertToExprType(condition), ExprType::eBooleanType)) {
+		addError(CError(ErrorCodes::IncorrectExprType, pos, exprTypeToStr.at(gen->convertToExprType(condition))));
+		conditionOk = false;
 	}
+
+	if (!conditionOk) {
+		acceptKeyword(KeyWords::thenSy);
+		statement(scope);
+
+		if (isKeyword() && keywordEquals(KeyWords::elseSy)) {
+			acceptKeyword(KeyWords::elseSy);
+			statement(scope);
+		}
+		return;
+	}
+
+	auto conditionIsTrue = gen->createEqual(condition, gen->getTrue());
+	auto function = gen->getCurrentFunction();
+	auto thenBB = gen->createBlock(function, "then");
+	auto elseBB = gen->createBlock("else");
+	auto mergeBB = gen->createBlock("ifcont");
+
+	gen->createCondBr(conditionIsTrue, thenBB, elseBB);
+	gen->setInsertionPoint(thenBB);
 
 	acceptKeyword(KeyWords::thenSy);
 	statement(scope);
+
+	thenBB = gen->getInsertionBlock();
+	gen->addBlock(function, elseBB);
+	gen->setInsertionPoint(elseBB);
+
 	if (isKeyword() && keywordEquals(KeyWords::elseSy)) {
 		acceptKeyword(KeyWords::elseSy);
 		statement(scope);
 	}
+	gen->createBr(mergeBB);
+	elseBB = gen->getInsertionBlock();
+
+	gen->addBlock(function, mergeBB);
+	gen->setInsertionPoint(mergeBB);
 }
 
-//TODO
 void CParser::whileStatement(std::shared_ptr<CScope> scope) {
 	acceptKeyword(KeyWords::whileSy);
 	auto pos = token->getPosition();
-	ExprType exprType = expression(scope);
-	if (!isDerived(exprType, ExprType::eBooleanType)) {
-		addError(CError(ErrorCodes::IncorrectExprType, pos, exprTypeToStr.at(exprType)));
+
+
+	auto function = gen->getCurrentFunction();
+	auto loopCondBB = gen->createBlock(function, "loop_cond");
+	gen->createBr(loopCondBB);
+	gen->setInsertionPoint(loopCondBB);
+
+
+	auto condition = expression(scope);
+
+	//std::cout << int(static_cast<std::underlying_type<ExprType>::type>(gen->convertToExprType(condition))) << std::endl;
+
+	bool whileOk = true;
+	if (!gen->isDerived(gen->convertToExprType(condition), ExprType::eBooleanType)) {
+		addError(CError(ErrorCodes::IncorrectExprType, pos, exprTypeToStr.at(gen->convertToExprType(condition))));
+		whileOk = false;
 	}
+
+	if (!whileOk) {
+		acceptKeyword(KeyWords::doSy);
+		statement(scope);
+		return;
+	}
+
+	auto conditionIsTrue = gen->createEqual(condition, gen->getTrue());
+
+	auto bodyBB = gen->createBlock(function, "loop_body");
+	auto afterLoopBB = gen->createBlock(function, "after_loop");
+
+	gen->createCondBr(conditionIsTrue, bodyBB, afterLoopBB);
+
+	//loop body
 	acceptKeyword(KeyWords::doSy);
+	gen->setInsertionPoint(bodyBB);
 	statement(scope);
+
+	gen->createBr(loopCondBB);
+
+	//after loop
+	gen->setInsertionPoint(afterLoopBB);
+
 }
 
 

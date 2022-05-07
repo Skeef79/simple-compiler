@@ -69,6 +69,6 @@ KeyWords CKeywordToken::getKeyword() {
 	return name;
 }
 
-const std::unique_ptr<CVariant>& CConstToken::getValue() const {
+const std::shared_ptr<CVariant>& CConstToken::getValue() const {
 	return value;
 }

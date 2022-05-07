@@ -25,7 +25,7 @@ int main(int argc, char** argv) {
 		std::cout << "Can't open: " + fileName;
 		return 1;
 	}
-	
+
 	std::unique_ptr<Reader> reader = std::make_unique<Reader>(fstream);
 	std::unique_ptr<CLexer> lexer = std::make_unique<CLexer>(reader.release());
 	std::unique_ptr<CParser> parser = std::make_unique<CParser>(lexer.release());
@@ -36,6 +36,8 @@ int main(int argc, char** argv) {
 
 	if (parser->errorList.empty()) {
 		writer->write("Compiled succesfully!\n");
+		parser->printGeneratedCode();
+		parser->compile("result.o");
 	}
 	else {
 		writer->write("One or more errors occured:\n");

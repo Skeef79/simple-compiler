@@ -38,6 +38,7 @@ public:
 	void printCode();
 
 	int compileObjectTarget(const char* filename);
+	int getTypeHash(Type* t);
 
 	bool isDerived(Value* leftValue, Value* rightValue);
 	bool isDerived(ExprType leftValue, ExprType rightValue);
@@ -49,6 +50,8 @@ public:
 	Value* getValue(std::string varName, AllocaInst* alloca);
 	Value* getConstInt(std::shared_ptr<CIntVariant> value);
 	Value* getConstReal(std::shared_ptr<CRealVariant>value);
+	Value* getTrue();
+	Value* getFalse();
 
 	ExprType convertToExprType(Value* value);
 	Type* convertToTypePtr(ExprType exprType);
@@ -67,20 +70,28 @@ public:
 	Value* createNotEqual(Value* leftValue, Value* rightValue);
 
 	Function* initFunction(std::string funcName, Type* funcType, std::shared_ptr<CFuncParameters> funcParameters);
-	BasicBlock* createBlock(Function* function);
+	BasicBlock* createBlock(Function* function,std::string name = "entry");
+	BasicBlock* createBlock(std::string name);
 	void setInsertionPoint(BasicBlock* block);
 	void initFunctionParams(Function* function, std::shared_ptr<CFuncParameters>funcParameters, std::shared_ptr<CScope> scope);
 	BasicBlock* getInsertionBlock();
 	void createReturn(Function* function, Value* value);
+	Value* createCall(Function* function, std::vector<Value*>parameters);
+	Function* getCurrentFunction();
+	bool compareParams(std::vector<Value*> actualParameters, std::shared_ptr<CFuncParameters> expectedParameters);
+	void createCondBr(Value* cond, BasicBlock* thenBlock, BasicBlock* elseBlock);
+	void createBr(BasicBlock* block);
+	void addBlock(Function* function, BasicBlock* block);
+	void initWrite(std::shared_ptr<CScope>scope);
 
-
+	std::map<ExprType, Type*> exprTypeToTypePtr;
 private:
+
 	std::unique_ptr<LLVMContext> context;
 	std::unique_ptr<Module> module;
 	std::unique_ptr<IRBuilder<>> builder;
 
-	std::map<ExprType, Type*> exprTypeToTypePtr;
-	std::map<Type::TypeID, ExprType> typePtrToExprType;
+	std::map<int, ExprType> typePtrToExprType;
 
 	void initTypes();
 
@@ -89,8 +100,6 @@ private:
 };
 
 
-
-bool compareParams(std::vector<ExprType> actualParameters, std::shared_ptr<CFuncParameters> expectedParameters);
 
 
 

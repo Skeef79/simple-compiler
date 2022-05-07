@@ -57,9 +57,17 @@ void CScope::addIdent(std::string ident, std::string identType) {
 	idents[ident] = identType;
 }
 
-void CScope::addFunction(std::string ident, std::string functionType, std::shared_ptr<CFuncParameters> fParams) {
+void CScope::addFunction(std::string ident, std::string functionType, std::shared_ptr<CFuncParameters> fParams, Function* functionPtr) {
 	idents[ident] = functionType;
 	functions[ident] = fParams;
+	functionPtrs[ident] = functionPtr;
+}
+
+Function* CScope::getFunctionPtr(std::string ident) {
+	auto currentScope = shared_from_this();
+	while (currentScope && !currentScope->functions.count(ident))
+		currentScope = currentScope->parent;
+	return currentScope->functionPtrs[ident];
 }
 
 void CScope::addType(std::string ident, ExprType exprType) {

@@ -60,9 +60,9 @@ public:
 	CConstToken(CVariant* value, TextPosition pos);
 	std::string toString() override;
 
-	const std::unique_ptr<CVariant>& getValue() const;
+	const std::shared_ptr<CVariant>& getValue() const;
 private:
-	std::unique_ptr<CVariant> value;
+	std::shared_ptr<CVariant> value;
 };
 
 class CEOFToken : public CToken {
@@ -72,4 +72,4 @@ public:
 
 };
 
-void printToken(std::unique_ptr<CToken>& token);
+void printToken(std::shared_ptr<CToken>& token);

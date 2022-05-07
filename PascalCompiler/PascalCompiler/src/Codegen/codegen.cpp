@@ -4,18 +4,22 @@ CCodeGenerator::CCodeGenerator() {
 	context = std::make_unique<LLVMContext>();
 	module = std::make_unique<Module>("pascal program", *context);
 	builder = std::make_unique<IRBuilder<>>(*context);
+	initTypes();
+}
+
+int CCodeGenerator::getTypeHash(Type* t) {
+	return 128 * t->getScalarSizeInBits() + t->getTypeID();
 }
 
 void CCodeGenerator::initTypes() {
 	exprTypeToTypePtr[ExprType::eBooleanType] = builder->getInt1Ty();
-	typePtrToExprType[builder->getInt1Ty()->getTypeID()] = ExprType::eBooleanType;
+	typePtrToExprType[getTypeHash(builder->getInt1Ty())] = ExprType::eBooleanType;
 
 	exprTypeToTypePtr[ExprType::eIntType] = builder->getInt32Ty();
-	typePtrToExprType[builder->getInt32Ty()->getTypeID()] = ExprType::eIntType;
+	typePtrToExprType[getTypeHash(builder->getInt32Ty())] = ExprType::eIntType;
 
 	exprTypeToTypePtr[ExprType::eRealType] = builder->getDoubleTy();
-	typePtrToExprType[builder->getDoubleTy()->getTypeID()] = ExprType::eRealType;
-
+	typePtrToExprType[getTypeHash(builder->getDoubleTy())] = ExprType::eRealType;
 }
 
 Type* CCodeGenerator::convertToTypePtr(ExprType exprType) {
@@ -23,7 +27,7 @@ Type* CCodeGenerator::convertToTypePtr(ExprType exprType) {
 }
 
 ExprType CCodeGenerator::convertToExprType(Value* value) {
-	return typePtrToExprType.at(value->getType()->getTypeID());
+	return typePtrToExprType.at(getTypeHash(value->getType()));
 }
 
 
@@ -33,6 +37,9 @@ void CCodeGenerator::printCode() {
 }
 
 int CCodeGenerator::compileObjectTarget(const char* filename) {
+
+	//module->print(errs(), nullptr);
+
 	InitializeAllTargetInfos();
 	InitializeAllTargets();
 	InitializeAllTargetMCs();
@@ -97,11 +104,14 @@ void CCodeGenerator::createVariable(std::string varName, std::string varType, st
 	if (eVarType == ExprType::eErrorType)
 		return;
 
+
+
 	//using current insertion block get the function, corresponding to it
 	auto scopeFunction = builder->GetInsertBlock()->getParent();
 
 	//create an alloca instruction in the entry block of the function
 	//%varName = alloca type
+
 	auto alloca = createEntryBlockAlloca(scopeFunction, varName, convertToTypePtr(eVarType));
 
 	//store alloca adress in current scope
@@ -139,6 +149,13 @@ Value* CCodeGenerator::getConstReal(std::shared_ptr<CRealVariant>value) {
 	return ConstantFP::get(*context, APFloat(value->getValue()));
 }
 
+Value* CCodeGenerator::getTrue() {
+	return ConstantInt::get(builder->getInt1Ty(), 1);
+}
+
+Value* CCodeGenerator::getFalse() {
+	return ConstantInt::get(builder->getInt1Ty(), 0);
+}
 
 bool CCodeGenerator::isDerived(Value* leftValue, Value* rightValue) {
 	//Error types always derived
@@ -336,10 +353,13 @@ Function* CCodeGenerator::initFunction(std::string funcName, Type* funcType, std
 	return function;
 }
 
-BasicBlock* CCodeGenerator::createBlock(Function* function) {
-	return BasicBlock::Create(*context, "entry", function);
+BasicBlock* CCodeGenerator::createBlock(Function* function, std::string name) {
+	return BasicBlock::Create(*context, name, function);
 }
 
+BasicBlock* CCodeGenerator::createBlock(std::string name) {
+	return BasicBlock::Create(*context, name.c_str());
+}
 void CCodeGenerator::setInsertionPoint(BasicBlock* block) {
 	builder->SetInsertPoint(block);
 }
@@ -359,4 +379,56 @@ void CCodeGenerator::createReturn(Function* function, Value* value) {
 	builder->CreateRet(value);
 }
 
+bool CCodeGenerator::compareParams(std::vector<Value*> actualParameters, std::shared_ptr<CFuncParameters> expectedParameters) {
+	if (actualParameters.size() != expectedParameters->parameters.size())
+		return false;
+	for (int i = 0; i < actualParameters.size(); i++) {
+		if (convertToExprType(actualParameters[i]) != expectedParameters->parameters[i]->getType())
+			return false;
+	}
+	return true;
+}
 
+Value* CCodeGenerator::createCall(Function* function, std::vector<Value*>parameters) {
+	return builder->CreateCall(function, parameters);
+}
+
+Function* CCodeGenerator::getCurrentFunction() {
+	return builder->GetInsertBlock()->getParent();
+}
+
+void CCodeGenerator::createCondBr(Value* cond, BasicBlock* thenBlock, BasicBlock* elseBlock) {
+	builder->CreateCondBr(cond, thenBlock, elseBlock);
+}
+
+void CCodeGenerator::createBr(BasicBlock* block) {
+	builder->CreateBr(block);
+}
+
+void CCodeGenerator::addBlock(Function* function, BasicBlock* block) {
+	function->getBasicBlockList().push_back(block);
+}
+
+void CCodeGenerator::initWrite(std::shared_ptr<CScope>scope) {
+	auto i8p = builder->getInt8PtrTy();
+	auto printfType = FunctionType::get(i8p, true);
+	auto printfFunction = Function::Create(printfType, Function::ExternalLinkage, "printf", module.get());
+
+	//void _initWrite(std::string paramType, std::string format);
+
+	std::shared_ptr<CFuncParameters> writelnIntParams = std::make_shared<CFuncParameters>();
+	writelnIntParams->addParameter(std::make_shared<CParameter>("str", "integer", ExprType::eIntType, false));
+	auto writelnIntFunction = initFunction("writeln", convertToTypePtr(ExprType::eIntType), writelnIntParams);
+	scope->addFunction("writeln", "boolean", writelnIntParams, writelnIntFunction);
+	auto body = createBlock(writelnIntFunction);
+	Value* str;
+	for (auto& arg : writelnIntFunction->args())
+		str = &arg;
+
+
+	setInsertionPoint(body);
+	auto formatString = builder->CreateGlobalString("%d\n");
+	//str = builder->CreateIntCast(str, builder->getInt32Ty(), false);
+	builder->CreateCall(printfFunction, { formatString,str });
+	createReturn(writelnIntFunction, ConstantInt::get(convertToTypePtr(ExprType::eIntType), 0));
+}

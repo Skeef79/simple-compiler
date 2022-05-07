@@ -117,21 +117,27 @@ void CParser::addError(CError err) {
 //Scope handling
 
 std::shared_ptr<CScope> CParser::initBaseScope() {
+
 	std::shared_ptr<CScope> scope = std::make_shared<CScope>(nullptr);
-	
+	std::shared_ptr<CFuncParameters> mainParams = std::make_shared<CFuncParameters>();
+	auto mainFunction = gen->initFunction("main", gen->convertToTypePtr(ExprType::eIntType), mainParams);
+	auto mainBody = gen->createBlock(mainFunction);
+	gen->setInsertionPoint(mainBody);
+
 	scope->addType("integer", ExprType::eIntType);
 	scope->addType("real", ExprType::eRealType);
 	scope->addType("boolean", ExprType::eBooleanType);
 
-	//here I need to addIdent and generate true and false
-	scope->addIdent("true", "boolean");
-	scope->addIdent("false", "boolean");
+	//This is really bad!
+	gen->createVariable("true", "boolean", scope);
+	gen->createVariable("false", "boolean", scope);
+	gen->createAssignment("true", gen->getTrue(), scope);
+	gen->createAssignment("false", gen->getFalse(), scope);
 
-	//writeln and readln only for strings 
-	std::shared_ptr<CFuncParameters> sParams = std::make_unique<CFuncParameters>();
-	sParams->addParameter(std::make_shared<CParameter>(ExprType::eIntType, false));
+	auto prinfnType = FunctionType::get(gen->convertToTypePtr(ExprType::eBooleanType), true);
+	gen->initWrite(scope);
 
-	scope->addFunction("writeln", "boolean", sParams);
+	gen->setInsertionPoint(mainBody);
 
 	return scope;
 }

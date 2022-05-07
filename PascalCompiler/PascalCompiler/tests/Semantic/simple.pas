@@ -1,8 +1,19 @@
-var a,b:integer;
-	c:real;
-
+var a,b,c,i,n:integer;
+	
 begin
-	a := 20 + 30;
-	c := 1.2
+	i:= 1;
+	n:= 10;
+	a:= 0;
+	b:= 1;
+	c:= 1;
+
+	while i < n do
+	begin
+		c := a + b;
+		a := b;
+		b := c;
+		i := i+1;
+	end;
+	writeln(c)
 
 end.

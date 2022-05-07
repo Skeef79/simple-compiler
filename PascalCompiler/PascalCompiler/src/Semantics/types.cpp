@@ -36,13 +36,5 @@ void CFuncParameters::addParameters(std::shared_ptr<CFuncParameters> params) {
 	}
 }
 
-bool compareParams(std::vector<ExprType> actualParameters, std::shared_ptr<CFuncParameters> expectedParameters) {
-	if (actualParameters.size() != expectedParameters->parameters.size())
-		return false;
-	for (int i = 0; i < actualParameters.size(); i++) {
-		if (actualParameters[i] != expectedParameters->parameters[i]->getType())
-			return false;
-	}
-	return true;
-}
+
 
