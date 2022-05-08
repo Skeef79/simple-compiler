@@ -68,6 +68,8 @@
     <None Include="tests\Semantic\correct.pas" />
     <None Include="tests\Semantic\incorrect2.pas" />
     <None Include="tests\Semantic\simple.pas" />
+    <None Include="tests\Codegen\fib.pas" />
+    <None Include="tests\Codegen\fact.pas" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\IO\io.h">

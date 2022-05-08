@@ -186,6 +186,8 @@
     <None Include="examples\example.pas" />
     <None Include="examples\example3.pas" />
     <None Include="examples\example4.pas" />
+    <None Include="tests\Codegen\fact.pas" />
+    <None Include="tests\Codegen\fib.pas" />
     <None Include="tests\Lexer\test1.pas" />
     <None Include="tests\Lexer\test2.pas" />
     <None Include="tests\Parser\correct.pas" />

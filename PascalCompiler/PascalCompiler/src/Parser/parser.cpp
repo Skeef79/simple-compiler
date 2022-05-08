@@ -99,6 +99,7 @@ void CParser::program(std::shared_ptr<CScope> scope) {
 	}
 	catch (CError& e) {
 		addError(e);
+		return;
 	}
 
 	auto function = gen->getCurrentFunction();
@@ -294,13 +295,13 @@ void CParser::functionDeclaration(std::shared_ptr<CScope> scope) {
 		funcParameters);
 
 	scope->addFunction(funcIdent->getIdent(), funcType->getIdent(), funcParameters, function);
-	gen->createVariable(funcIdent->getIdent(), funcType->getIdent(), functionScope);
 
 	//define a block and create allocas
 	auto parentBlock = gen->getInsertionBlock();
 	auto body = gen->createBlock(function);
-
 	gen->setInsertionPoint(body);
+
+	gen->createVariable(funcIdent->getIdent(), funcType->getIdent(), functionScope);
 	gen->initFunctionParams(function, funcParameters, functionScope);
 
 	try {
@@ -308,6 +309,7 @@ void CParser::functionDeclaration(std::shared_ptr<CScope> scope) {
 	}
 	catch (CError err) {
 		function->eraseFromParent();
+		return;
 	}
 
 	gen->createReturn(function, gen->getValue(funcIdent->getIdent(), functionScope->getAlloca(funcIdent->getIdent())));
@@ -494,7 +496,11 @@ void CParser::assignmentStatement(std::shared_ptr<CScope> scope) {
 	}
 
 	gen->createAssignment(var->getIdent(), expr, scope);
-
+	if (scope->isFunction(var->getIdent())) {
+		auto function = gen->getCurrentFunction();
+		auto funcIdent = function->getName().str();
+		gen->createReturn(function, gen->getValue(funcIdent, scope->getAlloca(funcIdent)));
+	}
 }
 
 Value* CParser::variable(std::shared_ptr<CScope> scope) {
@@ -716,12 +722,13 @@ Value* CParser::factor(std::shared_ptr<CScope> scope) { //bool isUnary?
 		auto constToken = acceptConst(getTokenVariantType());
 		auto variantType = constToken->getValue()->getVariantType();
 		auto exprType = variantTypeToExprType.at(variantType);
-		if (exprType == ExprType::eIntType)
+		if (exprType == ExprType::eIntType) {
 			return gen->getConstInt(std::dynamic_pointer_cast<CIntVariant>(constToken->getValue()));
+		}
 		if (exprType == ExprType::eRealType)
 			return gen->getConstReal(std::dynamic_pointer_cast<CRealVariant>(constToken->getValue()));
 		if (exprType == ExprType::eBooleanType) {
-			if (std::dynamic_pointer_cast<CBooleanVariant>(constToken->getValue()))
+			if (std::dynamic_pointer_cast<CBooleanVariant>(constToken->getValue())->getValue())
 				return gen->getTrue();
 			else
 				return gen->getFalse();

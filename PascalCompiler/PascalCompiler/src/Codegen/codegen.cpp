@@ -108,8 +108,6 @@ void CCodeGenerator::createVariable(std::string varName, std::string varType, st
 	if (eVarType == ExprType::eErrorType)
 		return;
 
-
-
 	//using current insertion block get the function, corresponding to it
 	auto scopeFunction = builder->GetInsertBlock()->getParent();
 
@@ -370,9 +368,15 @@ void CCodeGenerator::setInsertionPoint(BasicBlock* block) {
 
 //create variables for function parameters
 void CCodeGenerator::initFunctionParams(Function* function, std::shared_ptr<CFuncParameters> funcParameters, std::shared_ptr<CScope> scope) {
-	for (auto param : funcParameters->parameters) {
-		createVariable(param->getName(), param->getStrType(), scope);
+	int i = 0;
+	for (auto& arg : function->args()) {
+		auto alloca = createEntryBlockAlloca(function, arg.getName().str(), arg.getType());
+		builder->CreateStore(&arg,alloca);
+		scope->addIdent(arg.getName().str(), funcParameters->parameters[i]->getStrType());
+		scope->addAlloca(arg.getName().str(), alloca);
+		i++;
 	}
+
 }
 
 BasicBlock* CCodeGenerator::getInsertionBlock() {

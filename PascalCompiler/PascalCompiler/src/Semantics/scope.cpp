@@ -31,7 +31,7 @@ ExprType CScope::getTypeforType(std::string ident) {
 
 std::shared_ptr<CFuncParameters> CScope::getFunctionParameters(std::string ident) {
 	auto currentScope = shared_from_this();
-	while (currentScope && !currentScope->idents.count(ident))
+	while (currentScope && !currentScope->functions.count(ident))
 		currentScope = currentScope->parent;
 
 	return currentScope->functions[ident];

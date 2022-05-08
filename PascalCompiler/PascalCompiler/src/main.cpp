@@ -12,12 +12,10 @@
 //PascalCompiler.exe file.pas
 int main(int argc, char** argv) {
 
-	//std::string fileName(argv[1]);
+	std::string fileName(argv[1]);
+	std::cout << fileName << std::endl;
 
-	//std::cout << fileName << std::endl;
-
-
-	std::string fileName = "tests/Semantic/simple.pas";
+	//std::string fileName = "tests/Codegen/fact.pas";
 
 	std::ifstream fstream(fileName);
 
@@ -47,4 +45,5 @@ int main(int argc, char** argv) {
 	}
 
 	fstream.close();
+	system("clang result.o -o result.exe");
 }
