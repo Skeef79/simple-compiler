@@ -82,7 +82,8 @@ public:
 	void createCondBr(Value* cond, BasicBlock* thenBlock, BasicBlock* elseBlock);
 	void createBr(BasicBlock* block);
 	void addBlock(Function* function, BasicBlock* block);
-	void initWrite(std::shared_ptr<CScope>scope);
+	void callWriteLn(std::vector<Value*> params);
+	bool isWriteLn(std::string ident);
 
 	std::map<ExprType, Type*> exprTypeToTypePtr;
 private:
@@ -94,7 +95,7 @@ private:
 	std::map<int, ExprType> typePtrToExprType;
 
 	void initTypes();
-
+	Function* printfFunction;
 	AllocaInst* createEntryBlockAlloca(Function* function,
 		const std::string& varName, Type* varType);
 };

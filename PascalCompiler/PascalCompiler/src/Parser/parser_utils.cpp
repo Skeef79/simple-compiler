@@ -129,15 +129,7 @@ std::shared_ptr<CScope> CParser::initBaseScope() {
 	scope->addType("boolean", ExprType::eBooleanType);
 
 	//This is really bad!
-	gen->createVariable("true", "boolean", scope);
-	gen->createVariable("false", "boolean", scope);
-	gen->createAssignment("true", gen->getTrue(), scope);
-	gen->createAssignment("false", gen->getFalse(), scope);
-
-	auto prinfnType = FunctionType::get(gen->convertToTypePtr(ExprType::eBooleanType), true);
-	gen->initWrite(scope);
-
+	
 	gen->setInsertionPoint(mainBody);
-
 	return scope;
 }

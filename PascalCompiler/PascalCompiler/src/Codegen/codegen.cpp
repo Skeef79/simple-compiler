@@ -5,6 +5,10 @@ CCodeGenerator::CCodeGenerator() {
 	module = std::make_unique<Module>("pascal program", *context);
 	builder = std::make_unique<IRBuilder<>>(*context);
 	initTypes();
+
+	auto i8p = builder->getInt8PtrTy();
+	auto printfType = FunctionType::get(i8p, true);
+	printfFunction = Function::Create(printfType, Function::ExternalLinkage, "printf", module.get());
 }
 
 int CCodeGenerator::getTypeHash(Type* t) {
@@ -409,26 +413,28 @@ void CCodeGenerator::addBlock(Function* function, BasicBlock* block) {
 	function->getBasicBlockList().push_back(block);
 }
 
-void CCodeGenerator::initWrite(std::shared_ptr<CScope>scope) {
-	auto i8p = builder->getInt8PtrTy();
-	auto printfType = FunctionType::get(i8p, true);
-	auto printfFunction = Function::Create(printfType, Function::ExternalLinkage, "printf", module.get());
-
-	//void _initWrite(std::string paramType, std::string format);
-
-	std::shared_ptr<CFuncParameters> writelnIntParams = std::make_shared<CFuncParameters>();
-	writelnIntParams->addParameter(std::make_shared<CParameter>("str", "integer", ExprType::eIntType, false));
-	auto writelnIntFunction = initFunction("writeln", convertToTypePtr(ExprType::eIntType), writelnIntParams);
-	scope->addFunction("writeln", "boolean", writelnIntParams, writelnIntFunction);
-	auto body = createBlock(writelnIntFunction);
-	Value* str;
-	for (auto& arg : writelnIntFunction->args())
-		str = &arg;
-
-
-	setInsertionPoint(body);
-	auto formatString = builder->CreateGlobalString("%d\n");
-	//str = builder->CreateIntCast(str, builder->getInt32Ty(), false);
-	builder->CreateCall(printfFunction, { formatString,str });
-	createReturn(writelnIntFunction, ConstantInt::get(convertToTypePtr(ExprType::eIntType), 0));
+void CCodeGenerator::callWriteLn(std::vector<Value*>params) {
+	std::string format;
+	for (auto param : params) {
+		if (param->getType()->isDoubleTy()) {
+			format += "%lf ";
+		}
+		else {
+			if (param->getType()->getScalarSizeInBits() == 1) {
+				//if(param->getVa)
+				//?
+			}
+			format += "%d ";
+		}
+	}
+	format += "\n";
+	auto formatStr = builder->CreateGlobalString(format);
+	params.insert(params.begin(), formatStr);
+	builder->CreateCall(printfFunction, params);
 }
+
+bool CCodeGenerator::isWriteLn(std::string ident) {
+	return ident == "writeln";
+}
+
+

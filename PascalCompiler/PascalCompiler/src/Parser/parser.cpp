@@ -720,6 +720,12 @@ Value* CParser::factor(std::shared_ptr<CScope> scope) { //bool isUnary?
 			return gen->getConstInt(std::dynamic_pointer_cast<CIntVariant>(constToken->getValue()));
 		if (exprType == ExprType::eRealType)
 			return gen->getConstReal(std::dynamic_pointer_cast<CRealVariant>(constToken->getValue()));
+		if (exprType == ExprType::eBooleanType) {
+			if (std::dynamic_pointer_cast<CBooleanVariant>(constToken->getValue()))
+				return gen->getTrue();
+			else
+				return gen->getFalse();
+		}
 	}
 
 	if (isIdent()) {
@@ -746,7 +752,6 @@ Value* CParser::factor(std::shared_ptr<CScope> scope) { //bool isUnary?
 	return exprType;
 }
 
-//TODO (I should call function now!)
 void CParser::procedureStatement(std::shared_ptr<CScope> scope) {
 	auto pos = token->getPosition();
 	auto functionIdent = acceptIdent();
@@ -765,6 +770,11 @@ void CParser::procedureStatement(std::shared_ptr<CScope> scope) {
 			}
 			acceptKeyword(KeyWords::rightParSy);
 		}
+	}
+
+	if (gen->isWriteLn(functionIdent->getIdent())) {
+		gen->callWriteLn(parameters);
+		return;
 	}
 
 	if (!scope->identDefinedGlobal(functionIdent->getIdent())) {
@@ -840,7 +850,7 @@ void CParser::structuredStatement(std::shared_ptr<CScope> scope) {
 	throw CError(ErrorCodes::UnexpectedKeyword, token->getPosition(), keywordsToStr.at(getTokenKeyword()));
 }
 
-//TODO
+
 void CParser::ifStatement(std::shared_ptr<CScope> scope) {
 	acceptKeyword(KeyWords::ifSy);
 	auto pos = token->getPosition();
@@ -903,8 +913,6 @@ void CParser::whileStatement(std::shared_ptr<CScope> scope) {
 
 
 	auto condition = expression(scope);
-
-	//std::cout << int(static_cast<std::underlying_type<ExprType>::type>(gen->convertToExprType(condition))) << std::endl;
 
 	bool whileOk = true;
 	if (!gen->isDerived(gen->convertToExprType(condition), ExprType::eBooleanType)) {

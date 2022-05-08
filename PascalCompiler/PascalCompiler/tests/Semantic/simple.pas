@@ -14,6 +14,6 @@ begin
 		b := c;
 		i := i+1;
 	end;
-	writeln(c)
+	writeln(n,c,i)
 
 end.
