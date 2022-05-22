@@ -1,4 +1,7 @@
-# Проектирование и реализация компилятора на языке С++
-
-
-Субботин Игорь ПМИ-3
+# Pascal Compiler
+Compiler for a subset of Pascal language written in C++ using LLVM for code generation.
+It supports:
+* functions
+* variable and type declarations
+* if statement
+* while statement
